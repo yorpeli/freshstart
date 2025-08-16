@@ -107,21 +107,49 @@ export const usePeopleWithRelations = () => {
         .from(TABLES.PEOPLE)
         .select(`
           *,
-          department:departments(*),
-          reports_to:people!reporting_manager_id(*)
+          department:departments(*)
         `);
       
       if (peopleError) {
         throw new Error(handleSupabaseError(peopleError));
       }
       
-      // Process the data to build direct_reports relationships
+      // Get all managers referenced by people
+      const managerIds = people?.filter(p => p.reporting_manager_id).map(p => p.reporting_manager_id) || [];
+      const uniqueManagerIds = [...new Set(managerIds)];
+      
+      let managers: Person[] = [];
+      if (uniqueManagerIds.length > 0) {
+        const { data: managersData, error: managersError } = await supabase
+          .from(TABLES.PEOPLE)
+          .select('*')
+          .in('person_id', uniqueManagerIds);
+        
+        if (managersError) {
+          console.warn('Error fetching managers:', managersError);
+        } else {
+          managers = managersData || [];
+        }
+      }
+      
+      // Create maps for quick lookup
+      const managersMap = new Map<number, Person>();
+      managers.forEach(manager => {
+        managersMap.set(manager.person_id, manager);
+      });
+      
+      // Process the data to build relationships
       const peopleMap = new Map<number, Person>();
       const peopleWithRelations = people || [];
       
-      // First pass: create map of all people
+      // First pass: create map of all people with manager links
       peopleWithRelations.forEach(person => {
-        peopleMap.set(person.person_id, { ...person, direct_reports: [] });
+        const reports_to = person.reporting_manager_id ? managersMap.get(person.reporting_manager_id) : undefined;
+        peopleMap.set(person.person_id, { 
+          ...person, 
+          direct_reports: [],
+          reports_to 
+        });
       });
       
       // Second pass: build direct_reports relationships
@@ -131,7 +159,7 @@ export const usePeopleWithRelations = () => {
           if (!manager.direct_reports) {
             manager.direct_reports = [];
           }
-          manager.direct_reports.push(person);
+          manager.direct_reports.push(peopleMap.get(person.person_id)!);
         }
       });
       

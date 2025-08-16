@@ -100,7 +100,7 @@ const PeopleView: React.FC = () => {
             <TrendingUp size={24} className="mx-auto" />
           </div>
           <p className="text-2xl font-bold text-gray-900">
-            {people?.filter(p => p.engagement_level >= 4).length || 0}
+            {people?.filter(p => (p.engagement_priority || 0) >= 4).length || 0}
           </p>
           <p className="text-sm text-gray-600">Highly Engaged</p>
         </Card>
@@ -151,9 +151,9 @@ const PeopleView: React.FC = () => {
 
                 {/* Engagement Level */}
                 <div className="flex items-center space-x-2 mb-3">
-                  {getEngagementIcon(person.engagement_level)}
-                  <span className={`text-xs px-2 py-1 rounded-full ${getEngagementColor(person.engagement_level)}`}>
-                    Engagement: {person.engagement_level}/5
+                  {getEngagementIcon(person.engagement_priority || 0)}
+                  <span className={`text-xs px-2 py-1 rounded-full ${getEngagementColor(person.engagement_priority || 0)}`}>
+                    Engagement: {person.engagement_priority || 0}/5
                   </span>
                 </div>
 
