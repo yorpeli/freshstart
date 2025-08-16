@@ -114,45 +114,32 @@ export const usePeopleWithRelations = () => {
         throw new Error(handleSupabaseError(peopleError));
       }
       
-      // Get all managers referenced by people
-      const managerIds = people?.filter(p => p.reporting_manager_id).map(p => p.reporting_manager_id) || [];
-      const uniqueManagerIds = [...new Set(managerIds)];
-      
-      let managers: Person[] = [];
-      if (uniqueManagerIds.length > 0) {
-        const { data: managersData, error: managersError } = await supabase
-          .from(TABLES.PEOPLE)
-          .select('*')
-          .in('person_id', uniqueManagerIds);
-        
-        if (managersError) {
-          console.warn('Error fetching managers:', managersError);
-        } else {
-          managers = managersData || [];
-        }
-      }
-      
-      // Create maps for quick lookup
-      const managersMap = new Map<number, Person>();
-      managers.forEach(manager => {
-        managersMap.set(manager.person_id, manager);
-      });
-      
-      // Process the data to build relationships
-      const peopleMap = new Map<number, Person>();
+      // Create a map of all people for easy lookup
       const peopleWithRelations = people || [];
+      const allPeopleMap = new Map<number, Person>();
       
-      // First pass: create map of all people with manager links
+      // First pass: create map of all people
       peopleWithRelations.forEach(person => {
-        const reports_to = person.reporting_manager_id ? managersMap.get(person.reporting_manager_id) : undefined;
-        peopleMap.set(person.person_id, { 
+        allPeopleMap.set(person.person_id, { 
           ...person, 
           direct_reports: [],
-          reports_to 
+          reports_to: undefined 
         });
       });
       
-      // Second pass: build direct_reports relationships
+      // Second pass: link managers and build relationships
+      const peopleMap = new Map<number, Person>();
+      peopleWithRelations.forEach(person => {
+        const reports_to = person.reporting_manager_id ? allPeopleMap.get(person.reporting_manager_id) : undefined;
+        const personWithManager = { 
+          ...person, 
+          direct_reports: [],
+          reports_to 
+        };
+        peopleMap.set(person.person_id, personWithManager);
+      });
+      
+      // Third pass: build direct_reports relationships
       peopleWithRelations.forEach(person => {
         if (person.reporting_manager_id && peopleMap.has(person.reporting_manager_id)) {
           const manager = peopleMap.get(person.reporting_manager_id)!;

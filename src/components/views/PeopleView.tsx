@@ -162,6 +162,9 @@ const PeopleView: React.FC = () => {
                   {person.reports_to ? (
                     <span>
                       Reports to: <span className="font-medium">{person.reports_to.first_name} {person.reports_to.last_name}</span>
+                      {person.reports_to.role_title && (
+                        <span className="text-gray-500"> ({person.reports_to.role_title})</span>
+                      )}
                     </span>
                   ) : (
                     <span className="text-gray-500">No direct manager</span>
