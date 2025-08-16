@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebSearch",
+      "WebSearch",
+      "WebSearch",
+      "Bash(npm run build:*)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}
