@@ -6,6 +6,10 @@ const Header: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = (pathname: string) => {
+    if (pathname.startsWith('/phases/') && pathname !== '/phases') {
+      return 'Phase Details';
+    }
+    
     switch (pathname) {
       case '/':
         return 'Dashboard';

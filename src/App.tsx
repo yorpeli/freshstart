@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
 import DashboardView from './components/views/DashboardView';
 import PhasesView from './components/views/PhasesView';
+import SinglePhaseView from './components/views/SinglePhaseView';
 import WorkstreamsView from './components/views/WorkstreamsView';
 import PeopleView from './components/views/PeopleView';
 import DepartmentsView from './components/views/DepartmentsView';
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardView />} />
             <Route path="/phases" element={<PhasesView />} />
+            <Route path="/phases/:id" element={<SinglePhaseView />} />
             <Route path="/workstreams" element={
               <ErrorBoundary>
                 <WorkstreamsView />

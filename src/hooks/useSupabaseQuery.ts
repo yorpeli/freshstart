@@ -47,6 +47,37 @@ export const usePhases = () => {
   return useSupabaseQuery<Phase>(TABLES.PHASES);
 };
 
+// Hook for fetching a single phase by ID
+export const useSinglePhase = (phaseId: string | undefined) => {
+  return useQuery({
+    queryKey: ['phase', phaseId],
+    queryFn: async (): Promise<Phase | null> => {
+      if (!phaseId) throw new Error('Phase ID is required');
+      
+      try {
+        const { data, error } = await supabase
+          .from(TABLES.PHASES)
+          .select('*')
+          .eq('phase_id', phaseId)
+          .single();
+        
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+        
+        return data;
+      } catch (err) {
+        console.error(`Error fetching phase ${phaseId}:`, err);
+        throw err;
+      }
+    },
+    enabled: !!phaseId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
+  });
+};
+
 export const useWorkstreams = () => {
   return useSupabaseQuery<Workstream>(TABLES.WORKSTREAMS, undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes
