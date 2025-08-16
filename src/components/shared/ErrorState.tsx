@@ -2,7 +2,8 @@ import { AlertTriangle } from 'lucide-react';
 import Card from '../ui/Card';
 
 interface ErrorStateProps {
-  error: Error;
+  error?: Error;
+  message?: string;
   onRetry?: () => void;
   title?: string;
   className?: string;
@@ -10,10 +11,13 @@ interface ErrorStateProps {
 
 const ErrorState: React.FC<ErrorStateProps> = ({ 
   error, 
+  message,
   onRetry, 
   title = 'Something went wrong',
   className = ''
 }) => {
+  const errorMessage = error?.message || message || 'An unknown error occurred';
+  
   return (
     <div className={className}>
       <Card className="text-center py-12">
@@ -21,7 +25,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({
           <AlertTriangle size={48} className="mx-auto" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-gray-600 mb-4">{error.message}</p>
+        <p className="text-gray-600 mb-4">{errorMessage}</p>
         {onRetry && (
           <button
             onClick={onRetry}

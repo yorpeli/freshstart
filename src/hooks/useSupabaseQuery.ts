@@ -44,13 +44,42 @@ export const useSupabaseQuery = <T>(
 
 // Specific hooks for each entity
 export const usePhases = () => {
-  return useSupabaseQuery<Phase>(TABLES.PHASES);
+  return useQuery({
+    queryKey: [TABLES.PHASES, 'sorted'],
+    queryFn: async (): Promise<Phase[]> => {
+      try {
+        const { data, error } = await supabase
+          .from(TABLES.PHASES)
+          .select('*')
+          .order('start_date', { ascending: true });
+        
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+        
+        // Ensure phases are sorted by start_date (earliest first)
+        const sortedPhases = (data || []).sort((a, b) => {
+          const dateA = new Date(a.start_date).getTime();
+          const dateB = new Date(b.start_date).getTime();
+          return dateA - dateB;
+        });
+        
+        return sortedPhases;
+      } catch (err) {
+        console.error(`Error fetching phases:`, err);
+        throw err;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
+  });
 };
 
 // Hook for fetching a single phase by ID
 export const useSinglePhase = (phaseId: string | undefined) => {
   return useQuery({
-    queryKey: ['phase', phaseId],
+    queryKey: ['phase', phaseId, 'v2'], // Added version to invalidate cache
     queryFn: async (): Promise<Phase | null> => {
       if (!phaseId) throw new Error('Phase ID is required');
       
@@ -72,7 +101,7 @@ export const useSinglePhase = (phaseId: string | undefined) => {
       }
     },
     enabled: !!phaseId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Force fresh data
     retry: 1,
     retryDelay: 1000,
   });

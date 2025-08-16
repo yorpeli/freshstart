@@ -22,7 +22,7 @@ const PhaseMetadata: React.FC<PhaseMetadataProps> = ({ phase, className = '' }) 
         </div>
 
         {/* Basic Information Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
           {/* Phase Number */}
           <div className="flex items-center space-x-3">
             <Hash size={18} className="text-gray-500" />
@@ -42,6 +42,17 @@ const PhaseMetadata: React.FC<PhaseMetadataProps> = ({ phase, className = '' }) 
               </p>
             </div>
           </div>
+
+          {/* Working Days */}
+          {phase.working_days && (
+            <div className="flex items-center space-x-3">
+              <Clock size={18} className="text-gray-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Working Days</p>
+                <p className="text-lg font-semibold text-gray-900">{phase.working_days}</p>
+              </div>
+            </div>
+          )}
 
           {/* Last Updated */}
           <div className="flex items-center space-x-3">

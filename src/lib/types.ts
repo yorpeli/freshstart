@@ -11,6 +11,11 @@ export interface Phase {
   value_percentage: number;
   description: string | null;
   success_criteria: string | null;
+  success_checkpoints: any | null; // JSONB - array of checkpoint objects
+  key_milestones: any | null; // JSONB - array of milestone objects
+  constraints_notes: string | null;
+  phase_outcomes: any | null; // JSONB - array of outcome objects
+  working_days: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +67,50 @@ export interface MeetingType {
   usage_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskType {
+  task_type_id: number;
+  type_name: string;
+  description: string | null;
+  color_code: string | null;
+  icon: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Task {
+  task_id: number;
+  phase_id: number;
+  initiative_id: number | null;
+  parent_task_id: number | null;
+  task_name: string;
+  description: string | null;
+  owner_id: number;
+  start_date: string | null;
+  due_date: string | null;
+  status: string;
+  priority: number | null;
+  notes: string | null;
+  source_meeting_id: number | null;
+  task_type_id: number | null;
+  created_at: string;
+  updated_at: string;
+  // Computed/joined fields
+  task_type?: TaskType;
+  owner?: Person;
+  phase?: Phase;
+  initiative?: {
+    initiative_id: number;
+    initiative_name: string;
+  };
+  parent_task?: {
+    task_id: number;
+    task_name: string;
+  };
+  subtasks?: Task[];
+  workstreams?: Workstream[];
 }
 
 // Navigation types

@@ -6,13 +6,15 @@ import {
   Users, 
   Building2, 
   CalendarDays,
-  BarChart3
+  BarChart3,
+  CheckSquare
 } from 'lucide-react';
 import type { NavigationItem } from '../../lib/types';
 
 const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/', icon: 'BarChart3', current: false },
   { name: 'Phases', href: '/phases', icon: 'Calendar', current: false },
+  { name: 'Tasks', href: '/tasks', icon: 'CheckSquare', current: false },
   { name: 'Workstreams', href: '/workstreams', icon: 'Target', current: false },
   { name: 'People', href: '/people', icon: 'Users', current: false },
   { name: 'Departments', href: '/departments', icon: 'Building2', current: false },
@@ -22,6 +24,7 @@ const navigation: NavigationItem[] = [
 const iconMap = {
   BarChart3,
   Calendar,
+  CheckSquare,
   Target,
   Users,
   Building2,

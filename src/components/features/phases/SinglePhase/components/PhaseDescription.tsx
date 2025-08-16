@@ -51,6 +51,21 @@ const PhaseDescription: React.FC<PhaseDescriptionProps> = ({ phase, className = 
             </div>
           )}
         </div>
+
+        {/* Constraints Notes Section */}
+        {phase.constraints_notes && (
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <FileText size={18} className="text-gray-500" />
+              <h3 className="text-lg font-medium text-gray-900">Constraints & Notes</h3>
+            </div>
+            <div className="bg-yellow-50 rounded-lg p-6 border-l-4 border-yellow-400">
+              <div className="prose prose-gray max-w-none">
+                <p className="text-gray-700 leading-relaxed text-base whitespace-pre-wrap">{phase.constraints_notes}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );
