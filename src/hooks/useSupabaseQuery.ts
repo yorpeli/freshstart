@@ -1,0 +1,111 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase, TABLES, handleSupabaseError } from '../lib/supabase';
+import type { Phase, Workstream, Person, Department, MeetingType } from '../lib/types';
+
+// Generic hook for fetching data from Supabase
+export const useSupabaseQuery = <T>(
+  table: string,
+  query?: string,
+  options?: {
+    enabled?: boolean;
+    staleTime?: number;
+    retry?: number;
+    retryDelay?: number;
+  }
+) => {
+  return useQuery({
+    queryKey: [table, query],
+    queryFn: async (): Promise<T[]> => {
+      try {
+        let queryBuilder = supabase.from(table).select('*');
+        
+        if (query) {
+          queryBuilder = queryBuilder.eq('query', query);
+        }
+        
+        const { data, error } = await queryBuilder;
+        
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+        
+        return data || [];
+      } catch (err) {
+        console.error(`Error fetching from ${table}:`, err);
+        throw err;
+      }
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
+    retry: options?.retry ?? 1,
+    retryDelay: options?.retryDelay ?? 1000,
+  });
+};
+
+// Specific hooks for each entity
+export const usePhases = () => {
+  return useSupabaseQuery<Phase>(TABLES.PHASES);
+};
+
+export const useWorkstreams = () => {
+  return useSupabaseQuery<Workstream>(TABLES.WORKSTREAMS, undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    retryDelay: 1000,
+  });
+};
+
+export const usePeople = () => {
+  return useSupabaseQuery<Person>(TABLES.PEOPLE);
+};
+
+export const useDepartments = () => {
+  return useSupabaseQuery<Department>(TABLES.DEPARTMENTS);
+};
+
+export const useMeetingTypes = () => {
+  return useSupabaseQuery<MeetingType>(TABLES.MEETING_TYPES);
+};
+
+// Hook for people with department and reporting relationships
+export const usePeopleWithRelations = () => {
+  return useQuery({
+    queryKey: [TABLES.PEOPLE, 'with-relations'],
+    queryFn: async (): Promise<Person[]> => {
+      const { data: people, error: peopleError } = await supabase
+        .from(TABLES.PEOPLE)
+        .select(`
+          *,
+          department:departments(*),
+          reports_to:people!reporting_manager_id(*)
+        `);
+      
+      if (peopleError) {
+        throw new Error(handleSupabaseError(peopleError));
+      }
+      
+      // Process the data to build direct_reports relationships
+      const peopleMap = new Map<number, Person>();
+      const peopleWithRelations = people || [];
+      
+      // First pass: create map of all people
+      peopleWithRelations.forEach(person => {
+        peopleMap.set(person.person_id, { ...person, direct_reports: [] });
+      });
+      
+      // Second pass: build direct_reports relationships
+      peopleWithRelations.forEach(person => {
+        if (person.reporting_manager_id && peopleMap.has(person.reporting_manager_id)) {
+          const manager = peopleMap.get(person.reporting_manager_id)!;
+          if (!manager.direct_reports) {
+            manager.direct_reports = [];
+          }
+          manager.direct_reports.push(person);
+        }
+      });
+      
+      return Array.from(peopleMap.values());
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
