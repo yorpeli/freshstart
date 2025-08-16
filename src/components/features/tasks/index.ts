@@ -1,6 +1,6 @@
 // Main components
 export { default as TasksContainer } from './TasksContainer';
-export { TaskDetailModal } from './TaskDetailModal';
+export { default as TaskDetailModal } from './TaskDetailModal';
 export { TasksFilters } from './TasksFilters';
 export { TasksTable, TaskRow, TasksTableHeader } from './TasksTable';
 

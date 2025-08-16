@@ -11,8 +11,8 @@ import {
   Users
 } from 'lucide-react';
 import type { Task, TaskType } from '../../../lib/types';
-import Badge from '../../ui/Badge';
-import Card from '../../ui/Card';
+import Badge from '../../../ui/Badge';
+import Card from '../../../ui/Card';
 
 interface TaskWithRelations extends Task {
   task_type: TaskType;

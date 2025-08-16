@@ -7,7 +7,8 @@ import {
   Building2, 
   CalendarDays,
   BarChart3,
-  CheckSquare
+  CheckSquare,
+  Video
 } from 'lucide-react';
 import type { NavigationItem } from '../../lib/types';
 
@@ -15,6 +16,7 @@ const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/', icon: 'BarChart3', current: false },
   { name: 'Phases', href: '/phases', icon: 'Calendar', current: false },
   { name: 'Tasks', href: '/tasks', icon: 'CheckSquare', current: false },
+  { name: 'Meetings', href: '/meetings', icon: 'Video', current: false },
   { name: 'Workstreams', href: '/workstreams', icon: 'Target', current: false },
   { name: 'People', href: '/people', icon: 'Users', current: false },
   { name: 'Departments', href: '/departments', icon: 'Building2', current: false },
@@ -29,6 +31,7 @@ const iconMap = {
   Users,
   Building2,
   CalendarDays,
+  Video,
 };
 
 const Sidebar: React.FC = () => {
