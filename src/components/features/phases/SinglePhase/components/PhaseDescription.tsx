@@ -21,8 +21,10 @@ const PhaseDescription: React.FC<PhaseDescriptionProps> = ({ phase, className = 
             <h3 className="text-lg font-medium text-gray-900">Description</h3>
           </div>
           {phase.description ? (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-700 leading-relaxed">{phase.description}</p>
+            <div className="bg-gray-50 rounded-lg p-6">
+              <div className="prose prose-gray max-w-none">
+                <p className="text-gray-700 leading-relaxed text-base whitespace-pre-wrap">{phase.description}</p>
+              </div>
             </div>
           ) : (
             <div className="bg-gray-50 rounded-lg p-4">
@@ -38,8 +40,10 @@ const PhaseDescription: React.FC<PhaseDescriptionProps> = ({ phase, className = 
             <h3 className="text-lg font-medium text-gray-900">Success Criteria</h3>
           </div>
           {phase.success_criteria ? (
-            <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-400">
-              <p className="text-gray-700 leading-relaxed">{phase.success_criteria}</p>
+            <div className="bg-green-50 rounded-lg p-6 border-l-4 border-green-400">
+              <div className="prose prose-gray max-w-none">
+                <p className="text-gray-700 leading-relaxed text-base whitespace-pre-wrap">{phase.success_criteria}</p>
+              </div>
             </div>
           ) : (
             <div className="bg-gray-50 rounded-lg p-4">

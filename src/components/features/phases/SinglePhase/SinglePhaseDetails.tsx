@@ -15,11 +15,11 @@ const SinglePhaseDetails: React.FC<SinglePhaseDetailsProps> = ({
 }) => {
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Phase Metadata */}
-      <PhaseMetadata phase={phase} />
-      
-      {/* Progress Overview */}
-      <PhaseProgress phase={phase} />
+      {/* Phase Metadata and Progress Overview - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <PhaseMetadata phase={phase} />
+        <PhaseProgress phase={phase} />
+      </div>
       
       {/* Description and Success Criteria */}
       <PhaseDescription phase={phase} />

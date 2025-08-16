@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://kesfmdnzvlcmlqofhyjp.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlc2ZtZG56dmxjbWxxb2ZoeWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMTk3MTgsImV4cCI6MjA3MDY5NTcxOH0.7mr_leHTmSt24ILUFfLxgjfBlkcOMC4o40L-6UL5m3Y';
 
 // Debug logging
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Anon Key (first 20 chars):', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'NOT SET');
+console.log('✅ Supabase URL:', supabaseUrl);
+console.log('✅ Supabase Anon Key (first 20 chars):', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'NOT SET');
 
 if (!supabaseAnonKey) {
   console.warn('VITE_SUPABASE_ANON_KEY is not set. Please check your environment variables.');

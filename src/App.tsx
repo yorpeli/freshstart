@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
 import DashboardView from './components/views/DashboardView';
-import PhasesView from './components/views/PhasesView';
+import PhasesView from './components/views/PhasesViewNew';
 import SinglePhaseView from './components/views/SinglePhaseView';
 import WorkstreamsView from './components/views/WorkstreamsView';
 import PeopleView from './components/views/PeopleView';

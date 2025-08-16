@@ -5,7 +5,8 @@
       "WebSearch",
       "WebSearch",
       "WebSearch",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "defaultMode": "acceptEdits"
   }

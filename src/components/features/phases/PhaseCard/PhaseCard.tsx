@@ -1,10 +1,9 @@
-import { TrendingUp, Target, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../../ui/Card';
 import PhaseHeader from './components/PhaseHeader';
 import PhaseTimeline from './components/PhaseTimeline';
-import PhaseProgressBar from './components/PhaseProgressBar';
-import PhaseStatus from './components/PhaseStatus';
+import PhaseDistributionBar from './components/PhaseProgressBar';
 import type { Phase } from '../../../../lib/types';
 
 interface PhaseCardProps {
@@ -42,27 +41,12 @@ const PhaseCard: React.FC<PhaseCardProps> = ({ phase, className = '' }) => {
           endDate={phase.end_date}
         />
         
-        <div className="space-y-4 mb-6">
-          <PhaseProgressBar
-            label="Learning Progress"
-            percentage={phase.learning_percentage}
-            color="blue"
-            icon={<TrendingUp size={16} />}
-          />
-          
-          <PhaseProgressBar
-            label="Value Progress"
-            percentage={phase.value_percentage}
-            color="green"
-            icon={<Target size={16} />}
+        <div className="mb-6">
+          <PhaseDistributionBar
+            learningPercentage={phase.learning_percentage}
+            valuePercentage={phase.value_percentage}
           />
         </div>
-        
-        <PhaseStatus
-          updatedAt={phase.updated_at}
-          learningPercentage={phase.learning_percentage}
-          valuePercentage={phase.value_percentage}
-        />
         
         {/* Details Button */}
         <div className="mt-4 pt-4 border-t border-gray-100">
