@@ -1,6 +1,7 @@
 export { default as MeetingsContainer } from './MeetingsContainer';
 export { default as MeetingsList } from './MeetingsList';
-export { default as MeetingRow } from './MeetingRow';
-export { default as CreateMeetingModal } from './CreateMeetingModal';
+export { default as CreateMeetingModal } from './CreateMeetingModal/CreateMeetingModal';
 export { default as MeetingTypeSelector } from './CreateMeetingModal/MeetingTypeSelector';
 export { default as AttendeeSelector } from './CreateMeetingModal/AttendeeSelector';
+export { default as MeetingDetailModal } from './MeetingDetailModal/MeetingDetailModal';
+export { default as MeetingConductor } from './MeetingDetailModal/MeetingConductor';

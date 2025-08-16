@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, MapPin } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Eye } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import MeetingDetailModal from './MeetingDetailModal/MeetingDetailModal';
 
 interface Meeting {
   meeting_id: number;
@@ -26,6 +27,8 @@ const MeetingsList: React.FC = () => {
   const [attendees, setAttendees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -142,6 +145,21 @@ const MeetingsList: React.FC = () => {
     });
   };
 
+  const handleViewDetails = (meetingId: number) => {
+    setSelectedMeetingId(meetingId);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedMeetingId(null);
+  };
+
+  const handleMeetingUpdated = () => {
+    // Refresh meetings list when a meeting is updated
+    fetchMeetings();
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -236,6 +254,9 @@ const MeetingsList: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Attendees
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -287,14 +308,32 @@ const MeetingsList: React.FC = () => {
                       ));
                     })()}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleViewDetails(meeting.meeting_id)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      View Details
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
-  );
-};
+       
+       {/* Meeting Detail Modal */}
+       {isDetailModalOpen && selectedMeetingId && (
+         <MeetingDetailModal
+           isOpen={isDetailModalOpen}
+           onClose={handleCloseDetailModal}
+           meetingId={selectedMeetingId}
+           onMeetingUpdated={handleMeetingUpdated}
+         />
+       )}
+     </div>
+   );
+ };
 
 export default MeetingsList;
