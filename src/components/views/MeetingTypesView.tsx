@@ -110,7 +110,7 @@ const MeetingTypesView: React.FC = () => {
         {meetingTypes?.map((meetingType) => {
           const category = getMeetingCategory(meetingType.type_name);
           return (
-            <Card key={meetingType.type_id} className="hover:shadow-md transition-shadow duration-200">
+            <Card key={meetingType.meeting_type_id} className="hover:shadow-md transition-shadow duration-200">
               {/* Meeting Type Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
@@ -126,7 +126,7 @@ const MeetingTypesView: React.FC = () => {
               <div className="space-y-3 mb-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Clock size={14} />
-                  <span>Duration: {formatDuration(meetingType.default_duration)}</span>
+                  <span>Duration: {formatDuration(meetingType.default_duration_minutes || 0)}</span>
                 </div>
                 
                 <div className="flex items-start space-x-2 text-sm text-gray-600">
@@ -134,14 +134,14 @@ const MeetingTypesView: React.FC = () => {
                   <div className="flex-1">
                     <span className="font-medium">Template:</span>
                     <p className="text-xs text-gray-500 mt-1 bg-gray-50 p-2 rounded">
-                      {getTemplatePreview(meetingType.template)}
+                      {getTemplatePreview(meetingType.template_structure)}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Template Structure */}
-              {meetingType.template && typeof meetingType.template === 'object' && (
+              {meetingType.template_structure && typeof meetingType.template_structure === 'object' && (
                 <div className="mb-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <Settings size={14} />
@@ -149,8 +149,8 @@ const MeetingTypesView: React.FC = () => {
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-xs text-gray-600">
                     <pre className="whitespace-pre-wrap break-words">
-                      {JSON.stringify(meetingType.template, null, 2).substring(0, 200)}
-                      {JSON.stringify(meetingType.template, null, 2).length > 200 && '...'}
+                      {JSON.stringify(meetingType.template_structure, null, 2).substring(0, 200)}
+                      {JSON.stringify(meetingType.template_structure, null, 2).length > 200 && '...'}
                     </pre>
                   </div>
                 </div>

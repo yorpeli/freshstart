@@ -10,17 +10,14 @@ interface Meeting {
   duration_minutes: number;
   location_platform: string;
   status: string;
-  meeting_type_id: number;
-  phase_id: number;
-  initiative_id: number;
   template_data: any;
+  meeting_objectives: string | null;
+  key_messages: string | null;
   structured_notes: any;
   unstructured_notes: string | null;
   free_form_insights: string | null;
   meeting_summary: string | null;
   overall_assessment: string | null;
-  learning_objectives: string | null;
-  key_messages: string | null;
 }
 
 interface MeetingType {
@@ -290,8 +287,8 @@ const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
                       <dd className="text-sm text-gray-900">{initiative?.initiative_name || 'Not specified'}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Learning Objectives</dt>
-                      <dd className="text-sm text-gray-900">{meeting.learning_objectives || 'Not specified'}</dd>
+                      <dt className="text-sm font-medium text-gray-500">Meeting Objectives</dt>
+                      <dd className="text-sm text-gray-900">{meeting.meeting_objectives || 'Not specified'}</dd>
                     </div>
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Key Messages</dt>

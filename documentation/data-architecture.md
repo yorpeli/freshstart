@@ -138,9 +138,13 @@ source_meeting_id INT REFERENCES meetings(meeting_id) -- NULL = planned, NOT NUL
 meeting_id SERIAL PRIMARY KEY
 meeting_type_id INT REFERENCES meeting_types(meeting_type_id)
 template_data JSONB -- Copy of meeting_type.template_structure
+meeting_objectives TEXT -- Meeting-specific learning objectives
+key_messages TEXT -- Key messages to communicate
 structured_notes JSONB -- Actual agenda responses
 unstructured_notes TEXT -- Transcriptions, observations
 free_form_insights TEXT -- Random insights
+meeting_summary TEXT -- Post-meeting summary
+overall_assessment TEXT -- Overall meeting assessment
 ```
 
 **Meeting Lifecycle:**
@@ -154,7 +158,7 @@ free_form_insights TEXT -- Random insights
 ```sql
 meeting_type_id SERIAL PRIMARY KEY
 type_name VARCHAR(100) -- "1:1 Direct Report"
-template_structure JSONB -- Rich agenda template
+template_structure JSONB -- Rich agenda template with meeting_objectives, key_messages, agenda_sections
 ```
 
 **Current Templates:**
@@ -480,6 +484,7 @@ CREATE TABLE decision_points (
 - Ensure template_data auto-copy works correctly
 - Maintain JSONB structure consistency
 - Handle template customization properly
+- **Field Name Consistency**: All references use `meeting_objectives` (not `learning_objectives`)
 
 ### **2. Hierarchical Data Management**
 - Task parent/child relationships must be bulletproof

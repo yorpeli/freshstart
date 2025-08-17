@@ -47,7 +47,7 @@ const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({
     location_platform: '',
     phase_id: null as number | null,
     initiative_id: null as number | null,
-    learning_objectives: '',
+    meeting_objectives: '',
     key_messages: ''
   });
 
@@ -148,7 +148,7 @@ const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({
           location_platform: formData.location_platform,
           phase_id: formData.phase_id,
           initiative_id: formData.initiative_id,
-          learning_objectives: formData.learning_objectives,
+          meeting_objectives: formData.meeting_objectives,
           key_messages: formData.key_messages,
           template_data: templateData,
           status: 'scheduled'
@@ -183,7 +183,7 @@ const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({
         location_platform: '',
         phase_id: null,
         initiative_id: null,
-        learning_objectives: '',
+        meeting_objectives: '',
         key_messages: ''
       });
       setSelectedTemplate(null);
@@ -270,25 +270,25 @@ const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({
                     </div>
                   )}
 
-                  {/* Learning Objectives Customization */}
-                  {selectedTemplate.learning_objectives && Array.isArray(selectedTemplate.learning_objectives) && (
+                  {/* Meeting Objectives Customization */}
+                  {selectedTemplate.meeting_objectives && Array.isArray(selectedTemplate.meeting_objectives) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Learning Objectives
+                        Meeting Objectives
                       </label>
                       <div className="space-y-2">
-                        {selectedTemplate.learning_objectives.map((objective: string, index: number) => (
+                        {selectedTemplate.meeting_objectives.map((objective: string, index: number) => (
                           <input
                             key={index}
                             type="text"
                             value={objective}
                             onChange={(e) => {
                               const newTemplate = { ...selectedTemplate };
-                              newTemplate.learning_objectives[index] = e.target.value;
+                              newTemplate.meeting_objectives[index] = e.target.value;
                               setSelectedTemplate(newTemplate);
                             }}
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter learning objective"
+                            placeholder="Enter meeting objective"
                           />
                         ))}
                       </div>
@@ -450,14 +450,14 @@ const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({
             </div>
           </div>
 
-          {/* Learning Objectives */}
+          {/* Meeting Objectives */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Learning Objectives
+              Meeting Objectives
             </label>
             <textarea
-              value={formData.learning_objectives}
-              onChange={(e) => setFormData(prev => ({ ...prev, learning_objectives: e.target.value }))}
+              value={formData.meeting_objectives}
+              onChange={(e) => setFormData(prev => ({ ...prev, meeting_objectives: e.target.value }))}
               rows={3}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               placeholder="What do you want to learn from this meeting?"

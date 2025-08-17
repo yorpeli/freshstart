@@ -137,18 +137,18 @@ const MeetingTypeSelector: React.FC<MeetingTypeSelectorProps> = ({
           </div>
         )}
 
-        {/* Learning Objectives */}
-        {template.learning_objectives && Array.isArray(template.learning_objectives) && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-semibold text-gray-700">Learning Objectives</span>
-            </div>
-            <ul className="list-disc list-inside space-y-1">
-              {template.learning_objectives.map((objective: string, index: number) => (
-                <li key={index} className="text-xs text-gray-600">{objective}</li>
+        {/* Meeting Objectives */}
+        {template.meeting_objectives && Array.isArray(template.meeting_objectives) && (
+          <div className="space-y-2">
+            <span className="text-sm font-semibold text-gray-700">Meeting Objectives</span>
+            <div className="space-y-1">
+              {template.meeting_objectives.map((objective: string, index: number) => (
+                <div key={index} className="flex items-start gap-2">
+                  <div className="flex-shrink-0 w-2 h-2 bg-blue-400 rounded-full mt-2"></div>
+                  <span className="text-sm text-gray-600">{objective}</span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
       </div>
