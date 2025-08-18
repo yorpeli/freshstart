@@ -172,27 +172,31 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
           {viewMode === '1day' ? 'Daily Schedule' : 
            viewMode === '3days' ? '3-Day Schedule' : 'Weekly Schedule'}
         </h2>
-        <div className="flex items-center space-x-2">
-          {viewMode === '1day' ? (
-            <>
-              <span className="text-sm text-gray-500">
-                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-              </span>
-              {isToday(selectedDate) && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                  Today
+                  <div className="flex items-center space-x-2">
+            {viewMode === '1day' ? (
+              <>
+                <span className="text-sm text-gray-500">
+                  {format(selectedDate, 'EEEE, MMMM d, yyyy')}
                 </span>
-              )}
-            </>
-          ) : (
-            <span className="text-sm text-gray-500">
-              {viewMode === '3days' 
-                ? `${format(viewRange[0], 'MMM d')} - ${format(viewRange[viewRange.length - 1], 'MMM d, yyyy')}`
-                : `${format(viewRange[0], 'MMM d')} - ${format(viewRange[viewRange.length - 1], 'MMM d, yyyy')}`
-              }
+                {isToday(selectedDate) && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    Today
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-sm text-gray-500">
+                {viewMode === '3days' 
+                  ? `${format(viewRange[0], 'MMM d')} - ${format(viewRange[viewRange.length - 1], 'MMM d, yyyy')}`
+                  : `${format(viewRange[0], 'MMM d')} - ${format(viewRange[viewRange.length - 1], 'MMM d, yyyy')}`
+                }
+              </span>
+            )}
+            {/* Time Range Indicator */}
+            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+              {timeRange.startHour.toString().padStart(2, '0')}:00 - {timeRange.endHour.toString().padStart(2, '0')}:00
             </span>
-          )}
-        </div>
+          </div>
       </div>
 
              {/* Time Grid */}
@@ -293,18 +297,9 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
                         {getTimeBlockIcon(block)}
                         <span className="text-sm font-medium truncate">{block.title}</span>
                       </div>
-                      <div className="text-xs opacity-75 mb-1">
+                      <div className="text-xs opacity-75">
                         {block.startTime} - {block.endTime}
                       </div>
-                      {block.phase && (
-                        <div className="text-xs opacity-75">{block.phase}</div>
-                      )}
-                      {block.attendees && block.attendees.length > 0 && (
-                        <div className="text-xs opacity-75 mt-1">
-                          {block.attendees.slice(0, 2).join(', ')}
-                          {block.attendees.length > 2 && ` +${block.attendees.length - 2}`}
-                        </div>
-                      )}
                     </div>
                     <button className="text-gray-400 hover:text-gray-600 p-1">
                       <MoreVertical className="h-4 w-4" />
