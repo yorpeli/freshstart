@@ -1,97 +1,33 @@
 import React, { useState } from 'react';
-import { CheckCircle, Circle, Clock, Search, Plus } from 'lucide-react';
+import { CheckCircle, Circle, Clock, Plus } from 'lucide-react';
 import { format, isToday } from 'date-fns';
+import { useDailyPlannerTasks, useTaskDetail } from '../../../hooks/useDailyPlannerTasks';
+import { LoadingState, ErrorState } from '../../shared';
+import TaskDetailModal from '../tasks/TaskDetailModal';
 
 interface TaskListProps {
   selectedDate: Date;
 }
 
-interface Task {
-  id: number;
-  name: string;
-  description: string;
-  dueDate: string;
-  priority: number;
-  status: string;
-  phase: string;
-  initiative: string;
-  owner: string;
-  taskType: string;
-  estimatedMinutes?: number;
-}
+const TaskList: React.FC<TaskListProps> = ({ selectedDate }) => {
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-const TaskList: React.FC<TaskListProps> = ({ selectedDate: _selectedDate }) => {
-  const [filter, setFilter] = useState<'all' | 'today' | 'overdue' | 'upcoming'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  // Use real data from the database
+  const { data: tasks = [], isLoading, error } = useDailyPlannerTasks(selectedDate);
+  
+  // Fetch the selected task details when modal is open
+  const { data: selectedTask } = useTaskDetail(selectedTaskId);
 
-  // Mock data - will be replaced with real data from Supabase
-  const tasks: Task[] = [
-    {
-      id: 11,
-      name: 'Review Q3 OKRs',
-      description: 'Examine current quarter objectives and key results related to onboarding',
-      dueDate: '2025-09-15',
-      priority: 1,
-      status: 'not_started',
-      phase: 'Foundation',
-      initiative: 'Week 1: Internal Foundation',
-      owner: 'Yonatan Orpeli',
-      taskType: 'research',
-      estimatedMinutes: 120,
-    },
-    {
-      id: 10,
-      name: 'Review Previous PRDs',
-      description: 'Analyze past product requirement documents for onboarding initiatives',
-      dueDate: '2025-09-15',
-      priority: 1,
-      status: 'not_started',
-      phase: 'Foundation',
-      initiative: 'Week 1: Internal Foundation',
-      owner: 'Yonatan Orpeli',
-      taskType: 'research',
-      estimatedMinutes: 90,
-    },
-    {
-      id: 17,
-      name: 'Slack Channels and Calendar',
-      description: 'Join relevant Slack channels and gain calendar access to key meetings',
-      dueDate: '2025-09-16',
-      priority: 2,
-      status: 'not_started',
-      phase: 'Foundation',
-      initiative: 'Week 1: Internal Foundation',
-      owner: 'Yonatan Orpeli',
-      taskType: 'setup',
-      estimatedMinutes: 30,
-    },
-    {
-      id: 15,
-      name: 'Analytics Platforms Access',
-      description: 'Gain access to analytics dashboards and reporting tools',
-      dueDate: '2025-09-16',
-      priority: 2,
-      status: 'not_started',
-      phase: 'Foundation',
-      initiative: 'Week 1: Internal Foundation',
-      owner: 'Yonatan Orpeli',
-      taskType: 'setup',
-      estimatedMinutes: 45,
-    },
-    {
-      id: 16,
-      name: 'CRM and Support Tools',
-      description: 'Set up access to customer relationship management and support platforms',
-      dueDate: '2025-09-16',
-      priority: 2,
-      status: 'not_started',
-      phase: 'Foundation',
-      initiative: 'Week 1: Internal Foundation',
-      owner: 'Yonatan Orpeli',
-      taskType: 'setup',
-      estimatedMinutes: 60,
-    },
-  ];
+  const openTaskModal = (taskId: number) => {
+    setSelectedTaskId(taskId);
+    setIsModalOpen(true);
+  };
+
+  const closeTaskModal = () => {
+    setSelectedTaskId(null);
+    setIsModalOpen(false);
+  };
 
   const getPriorityColor = (priority: number) => {
     switch (priority) {
@@ -132,31 +68,11 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate: _selectedDate }) => {
     }
   };
 
-
-
   const isOverdue = (date: Date) => {
     return date < new Date() && !isToday(date);
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch = task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (!matchesSearch) return false;
-    
-    switch (filter) {
-      case 'today':
-        return isToday(new Date(task.dueDate));
-      case 'overdue':
-        return isOverdue(new Date(task.dueDate));
-      case 'upcoming':
-        return new Date(task.dueDate) > new Date();
-      default:
-        return true;
-    }
-  });
-
-  const sortedTasks = filteredTasks.sort((a, b) => {
+  const sortedTasks = tasks.sort((a, b) => {
     // Sort by priority first, then by due date
     if (a.priority !== b.priority) {
       return a.priority - b.priority;
@@ -164,48 +80,34 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate: _selectedDate }) => {
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
   });
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorState 
+          message="Failed to load tasks" 
+          error={error instanceof Error ? error : new Error(String(error))}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Tasks</h2>
         <div className="text-sm text-gray-500">
-          {filteredTasks.length} of {tasks.length}
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          />
-        </div>
-        
-        <div className="flex space-x-2">
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'today', label: 'Today' },
-            { key: 'overdue', label: 'Overdue' },
-            { key: 'upcoming', label: 'Upcoming' },
-          ].map((filterOption) => (
-            <button
-              key={filterOption.key}
-              onClick={() => setFilter(filterOption.key as any)}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                filter === filterOption.key
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {filterOption.label}
-            </button>
-          ))}
+          {sortedTasks.length} of {tasks.length}
         </div>
       </div>
 
@@ -214,6 +116,7 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate: _selectedDate }) => {
         {sortedTasks.map((task) => (
           <div
             key={task.id}
+            onClick={() => openTaskModal(task.id)}
             className={`p-4 bg-white border rounded-lg hover:shadow-md transition-shadow cursor-pointer ${
               isOverdue(new Date(task.dueDate)) ? 'border-red-300 bg-red-50' : 'border-gray-200'
             }`}
@@ -263,7 +166,7 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate: _selectedDate }) => {
           <div className="text-center py-8">
             <Circle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">
-              {searchTerm ? 'No tasks match your search' : 'No tasks for this filter'}
+              No tasks for this date
             </p>
           </div>
         )}
@@ -276,6 +179,15 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate: _selectedDate }) => {
           Add New Task
         </button>
       </div>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          isOpen={isModalOpen}
+          onClose={closeTaskModal}
+        />
+      )}
     </div>
   );
 };

@@ -1,31 +1,16 @@
 import React from 'react';
 import { Target, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { format, isToday } from 'date-fns';
+import { useDailyOverview } from '../../../hooks/useDailyOverview';
+import { LoadingState, ErrorState } from '../../shared';
 
 interface DailyOverviewProps {
   selectedDate: Date;
 }
 
 const DailyOverview: React.FC<DailyOverviewProps> = ({ selectedDate }) => {
-  // Mock data - will be replaced with real data from Supabase
-  const dailyStats = {
-    totalTasks: 8,
-    completedTasks: 3,
-    totalMeetings: 4,
-    focusTime: 6, // hours
-  };
-
-  const priorities = [
-    { id: 1, text: 'Review Q3 OKRs', priority: 'high', phase: 'Foundation' },
-    { id: 2, text: 'Legal Deep Dive Meeting', priority: 'high', phase: 'Foundation' },
-    { id: 3, text: 'Systems Access Setup', priority: 'medium', phase: 'Foundation' },
-  ];
-
-  const phaseProgress = [
-    { name: 'Foundation', progress: 65, color: 'bg-blue-500' },
-    { name: 'Discovery', progress: 30, color: 'bg-green-500' },
-    { name: 'Implementation', progress: 0, color: 'bg-yellow-500' },
-  ];
+  // Use real data from the database
+  const { data: dailyStats, isLoading, error } = useDailyOverview(selectedDate);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -38,6 +23,41 @@ const DailyOverview: React.FC<DailyOverviewProps> = ({ selectedDate }) => {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorState 
+          message="Failed to load daily overview" 
+          error={error instanceof Error ? error : new Error(String(error))}
+        />
+      </div>
+    );
+  }
+
+  // Use default values if data is not available
+  const stats = dailyStats || {
+    totalTasks: 0,
+    completedTasks: 0,
+    totalMeetings: 0,
+    focusTime: 0,
+    priorities: [],
+    phaseProgress: [
+      { name: 'Foundation', progress: 0, color: 'bg-blue-500' },
+      { name: 'Discovery', progress: 0, color: 'bg-green-500' },
+      { name: 'Implementation', progress: 0, color: 'bg-yellow-500' },
+    ],
   };
 
   return (
@@ -65,7 +85,7 @@ const DailyOverview: React.FC<DailyOverviewProps> = ({ selectedDate }) => {
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-blue-600" />
               <div className="ml-2">
-                <div className="text-lg font-semibold text-blue-900">{dailyStats.completedTasks}/{dailyStats.totalTasks}</div>
+                <div className="text-lg font-semibold text-blue-900">{stats.completedTasks}/{stats.totalTasks}</div>
                 <div className="text-xs text-blue-600">Tasks</div>
               </div>
             </div>
@@ -74,7 +94,7 @@ const DailyOverview: React.FC<DailyOverviewProps> = ({ selectedDate }) => {
             <div className="flex items-center">
               <Clock className="h-5 w-5 text-purple-600" />
               <div className="ml-2">
-                <div className="text-lg font-semibold text-purple-900">{dailyStats.totalMeetings}</div>
+                <div className="text-lg font-semibold text-purple-900">{stats.totalMeetings}</div>
                 <div className="text-xs text-purple-600">Meetings</div>
               </div>
             </div>
@@ -84,7 +104,7 @@ const DailyOverview: React.FC<DailyOverviewProps> = ({ selectedDate }) => {
           <div className="flex items-center">
             <Target className="h-5 w-5 text-green-600" />
             <div className="ml-2">
-              <div className="text-lg font-semibold text-green-900">{dailyStats.focusTime}h</div>
+              <div className="text-lg font-semibold text-green-900">{stats.focusTime}h</div>
               <div className="text-xs text-green-600">Focus Time</div>
             </div>
           </div>
@@ -94,28 +114,34 @@ const DailyOverview: React.FC<DailyOverviewProps> = ({ selectedDate }) => {
       {/* Daily Priorities */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-gray-900">Today's Priorities</h3>
-        <div className="space-y-2">
-          {priorities.map((priority) => (
-            <div key={priority.id} className="p-3 bg-white border rounded-lg">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900">{priority.text}</div>
-                  <div className="text-xs text-gray-500 mt-1">{priority.phase}</div>
+        {stats.priorities.length > 0 ? (
+          <div className="space-y-2">
+            {stats.priorities.map((priority) => (
+              <div key={priority.id} className="p-3 bg-white border rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">{priority.text}</div>
+                    <div className="text-xs text-gray-500 mt-1">{priority.phase}</div>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(priority.priority)}`}>
+                    {priority.priority}
+                  </span>
                 </div>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(priority.priority)}`}>
-                  {priority.priority}
-                </span>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4 text-gray-500 text-sm">
+            No high priority tasks for today
+          </div>
+        )}
       </div>
 
       {/* Phase Progress */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-gray-900">Phase Progress</h3>
         <div className="space-y-3">
-          {phaseProgress.map((phase) => (
+          {stats.phaseProgress.map((phase) => (
             <div key={phase.name} className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">{phase.name}</span>
