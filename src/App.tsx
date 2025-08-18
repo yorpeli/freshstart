@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
 import DashboardView from './components/views/DashboardView';
+import DailyPlannerView from './components/views/DailyPlannerView';
 import PhasesView from './components/views/PhasesViewNew';
 import SinglePhaseView from './components/views/SinglePhaseView';
 import TasksView from './components/views/TasksView';
@@ -32,6 +33,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<DashboardView />} />
+            <Route path="/daily-planner" element={<DailyPlannerView />} />
             <Route path="/phases" element={<PhasesView />} />
             <Route path="/phases/:id" element={<SinglePhaseView />} />
             <Route path="/tasks" element={

@@ -1,4 +1,4 @@
-export { default as PhaseCard } from './PhaseCard';
+// Main phases list exports
 export { default as PhasesList } from './PhasesList';
 export { default as PhasesContainer } from './PhasesContainer';
 
@@ -9,7 +9,17 @@ export {
   PhaseBackButton,
   PhaseMetadata,
   PhaseProgress,
-  PhaseDescription 
+  PhaseDescription,
+  PhaseTabs,
+  PhaseOverview,
+  PhaseTasks,
+  PhaseMeetings,
+  EditableText,
+  EditableNumber,
+  EditableDate,
+  // New Phase Milestone components
+  PhaseMilestoneCard,
+  usePhaseMilestoneTasks
 } from './SinglePhase';
 
 // Re-export sub-components for advanced usage

@@ -59,7 +59,7 @@ const PhaseOutcomes: React.FC<PhaseOutcomesProps> = ({ phase, className = '' }) 
           <h2 className="text-xl font-semibold text-gray-900">Phase Outcomes</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
           {Object.entries(outcomes).map(([key, value]: [string, any]) => {
             if (!value || (Array.isArray(value) && value.length === 0)) return null;
             
@@ -78,14 +78,14 @@ const PhaseOutcomes: React.FC<PhaseOutcomesProps> = ({ phase, className = '' }) 
                     {value.map((item: string, index: number) => (
                       <div 
                         key={index} 
-                        className="bg-green-50 border border-green-200 rounded-lg p-3"
+                        className="bg-green-50 border border-green-200 rounded-lg p-3 w-full"
                       >
                         <p className="text-gray-700 text-sm">{item}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 w-full">
                     <p className="text-gray-700 text-sm font-medium">"{value}"</p>
                   </div>
                 )}

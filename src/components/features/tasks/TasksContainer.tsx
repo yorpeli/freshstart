@@ -23,7 +23,6 @@ const TasksContainer: React.FC = () => {
     filters,
     expandedGroups,
     filteredTasks,
-    groupedTasks,
     updateFilters,
     toggleGroup
   } = useTaskFilters(tasksData || []);
@@ -41,7 +40,7 @@ const TasksContainer: React.FC = () => {
 
   // Loading state
   if (tasksLoading) {
-    return <LoadingState message="Loading tasks..." />;
+    return <LoadingState count={4} />;
   }
 
   // Error state
@@ -51,7 +50,7 @@ const TasksContainer: React.FC = () => {
 
   // Empty state
   if (!tasksData || tasksData.length === 0) {
-    return <EmptyState message="No tasks found" />;
+    return <EmptyState title="No tasks found" description="There are no tasks available at the moment." />;
   }
 
   return (
@@ -75,7 +74,8 @@ const TasksContainer: React.FC = () => {
       {/* Empty filtered state */}
       {filteredTasks.length === 0 && (
         <EmptyState 
-          message={
+          title="No matching tasks"
+          description={
             filters.searchQuery || filters.statusFilter !== 'all' || filters.taskTypeFilter !== 'all' 
               ? "No tasks match your filters" 
               : "No tasks found"

@@ -11,12 +11,12 @@ export interface TasksFiltersState {
   searchQuery: string;
   statusFilter: string;
   taskTypeFilter: string;
-  groupBy: 'phase' | 'type' | 'status' | 'none';
+  groupBy: 'phase' | 'type' | 'status' | 'date' | 'none';
 }
 
 export interface TasksTableProps {
   tasks: TaskWithRelations[];
-  groupBy: 'phase' | 'type' | 'status' | 'none';
+  groupBy: 'phase' | 'type' | 'status' | 'date' | 'none';
   expandedGroups: Set<string>;
   onToggleGroup: (groupKey: string) => void;
   onTaskClick: (task: TaskWithRelations) => void;

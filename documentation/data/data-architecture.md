@@ -89,7 +89,7 @@ learning_percentage INT -- 80, 60, 40, 30, 20
 value_percentage INT -- 20, 40, 60, 70, 80
 working_days INT -- 15 working days
 success_checkpoints JSONB -- Complex success criteria
-key_milestones JSONB -- Critical decision points
+key_milestones JSONB -- DEPRECATED: Milestone data now in tasks table
 constraints_notes TEXT -- Holiday considerations
 phase_outcomes JSONB -- Expected results
 ```
@@ -98,6 +98,27 @@ phase_outcomes JSONB -- Expected results
 - Auto-calculated week numbers from project start (2025-09-15)
 - Rich JSONB for complex planning data
 - Learning/Value percentage progression
+- **IMPORTANT**: `key_milestones` field is deprecated - milestone data now comes from tasks with `task_type_id = 9`
+
+**Phase Milestone Data Source:**
+Phase milestone information is now fetched from the `tasks` table where:
+- `task_type_id = 9` (Phase Milestone type)
+- `phase_id` matches the current phase
+- Includes: task name, description, due date, status, priority, and assigned person
+
+**Query for Phase Milestones:**
+```sql
+-- Get milestone tasks for a specific phase
+SELECT t.*, 
+       tt.type_name,
+       p.first_name, p.last_name
+FROM tasks t
+JOIN task_types tt ON t.task_type_id = tt.task_type_id
+JOIN people p ON t.owner_id = p.person_id
+WHERE t.phase_id = ? 
+  AND t.task_type_id = 9  -- Phase Milestone type
+ORDER BY t.due_date ASC, t.task_id ASC;
+```
 
 ### **2. INITIATIVES Table**
 ```sql
@@ -132,6 +153,36 @@ source_meeting_id INT REFERENCES meetings(meeting_id) -- NULL = planned, NOT NUL
 - **Planned Tasks**: `source_meeting_id = NULL`
 - **Action Items**: `source_meeting_id = [meeting_id]`
 - **Parent/Subtask**: Hierarchical via `parent_task_id`
+
+**Phase Milestone Tasks (NEW):**
+- **Task Type ID 9**: "Phase Milestone" - Critical decision points and milestones
+- **Data Source**: Fetched from `tasks` table instead of `phases.key_milestones` JSONB
+- **Benefits**: Better tracking, assignable, status management, due dates
+- **Display**: Shown in Key Milestones section of single phase view
+
+**Creating Phase Milestones:**
+```sql
+-- Create a new phase milestone task
+INSERT INTO tasks (
+  phase_id, 
+  task_name, 
+  description, 
+  owner_id, 
+  task_type_id, 
+  due_date,
+  status,
+  priority
+) VALUES (
+  1, -- phase_id
+  'Critical Decision: Manager Assessment',
+  'Evaluate if current manager is salvageable or needs transition plan',
+  1, -- owner_id
+  9, -- task_type_id = 9 (Phase Milestone)
+  '2025-09-19', -- due_date
+  'not_started',
+  3 -- high priority
+);
+```
 
 ### **4. MEETINGS Table (Dual-JSONB)**
 ```sql
@@ -337,7 +388,7 @@ LEFT JOIN meetings m ON t.source_meeting_id = m.meeting_id;
 - Timeline visualization of phases
 - Success checkpoint tracking
 - Learning vs Value progression
-- Key milestone indicators
+- Key milestone indicators (from tasks table)
 - Constraint/holiday callouts
 
 **Key Queries:**
@@ -351,8 +402,23 @@ SELECT
   value_percentage,
   working_days,
   success_checkpoints,
-  key_milestones
+  constraints_notes,
+  phase_outcomes
 FROM phases ORDER BY phase_number;
+
+-- Get key milestones for a phase (from tasks table)
+SELECT 
+  t.task_name,
+  t.description,
+  t.due_date,
+  t.status,
+  t.priority,
+  p.first_name || ' ' || p.last_name as owner_name
+FROM tasks t
+JOIN people p ON t.owner_id = p.person_id
+WHERE t.phase_id = ? 
+  AND t.task_type_id = 9  -- Phase Milestone type
+ORDER BY t.due_date ASC;
 
 -- Get initiative progress within phase
 SELECT 

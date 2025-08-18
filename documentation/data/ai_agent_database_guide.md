@@ -47,7 +47,7 @@ learning_percentage INT -- 80, 60, 40, 30, 20 (decreasing)
 value_percentage INT -- 20, 40, 60, 70, 80 (increasing)
 working_days INT -- Business days in phase
 success_checkpoints JSONB -- Complex success criteria
-key_milestones JSONB -- Critical decision points
+key_milestones JSONB -- DEPRECATED: No longer used for milestone data
 constraints_notes TEXT -- Holiday/external factor notes
 phase_outcomes JSONB -- Expected results
 ```
@@ -56,6 +56,27 @@ phase_outcomes JSONB -- Expected results
 - `start_week` and `end_week` are **GENERATED COLUMNS** - never update directly
 - `learning_percentage + value_percentage` should always equal 100
 - `phase_number` must be unique and sequential
+- `key_milestones` field is **DEPRECATED** - milestone data now comes from tasks table
+
+**IMPORTANT CHANGE - Key Milestones:**
+The `key_milestones` JSONB field is no longer used. Phase milestone data is now fetched from the `tasks` table where:
+- `task_type_id = 9` (Phase Milestone type)
+- `phase_id` matches the current phase
+- Tasks include: name, description, due date, status, and assigned person
+
+**Query for Phase Milestones:**
+```sql
+-- Get milestone tasks for a specific phase
+SELECT t.*, 
+       tt.type_name,
+       p.first_name, p.last_name
+FROM tasks t
+JOIN task_types tt ON t.task_type_id = tt.task_type_id
+JOIN people p ON t.owner_id = p.person_id
+WHERE t.phase_id = ? 
+  AND t.task_type_id = 9  -- Phase Milestone type
+ORDER BY t.due_date ASC, t.task_id ASC;
+```
 
 **JSONB Structure - success_checkpoints:**
 ```json
@@ -75,11 +96,18 @@ UPDATE phases SET description = 'Updated description' WHERE phase_id = 1;
 -- ✅ Safe: Update JSONB success criteria
 UPDATE phases SET success_checkpoints = jsonb_set(success_checkpoints, '{knowledge_goals}', '["New goal"]') WHERE phase_id = 1;
 
+-- ✅ Safe: Create new milestone task (instead of updating key_milestones)
+INSERT INTO tasks (phase_id, task_name, description, owner_id, task_type_id, due_date)
+VALUES (1, 'Critical Decision Point', 'Make go/no-go decision', 1, 9, '2025-09-20');
+
 -- ❌ Dangerous: Never update generated columns
 -- UPDATE phases SET start_week = 2 WHERE phase_id = 1; -- Will fail
 
 -- ❌ Dangerous: Don't break percentage logic
 -- UPDATE phases SET learning_percentage = 90, value_percentage = 30 WHERE phase_id = 1; -- Totals 120%
+
+-- ❌ Deprecated: Don't use key_milestones field
+-- UPDATE phases SET key_milestones = '{"milestone": "..."}' WHERE phase_id = 1; -- Field no longer used
 ```
 
 ---
@@ -329,6 +357,52 @@ SELECT * FROM task_tree ORDER BY level, task_name;
 SELECT task_name,
   CASE WHEN source_meeting_id IS NULL THEN 'Planned Task' ELSE 'Action Item' END as source
 FROM tasks;
+```
+
+**Phase Milestone Task Workflow:**
+```sql
+-- 1. Create a new phase milestone task
+INSERT INTO tasks (
+  phase_id, 
+  task_name, 
+  description, 
+  owner_id, 
+  task_type_id, 
+  due_date,
+  status,
+  priority
+) VALUES (
+  1, -- phase_id
+  'Critical Decision Point: Manager Assessment',
+  'Evaluate if current manager is salvageable or needs transition plan',
+  1, -- owner_id (person_id)
+  9, -- task_type_id = 9 (Phase Milestone)
+  '2025-09-19', -- due_date
+  'not_started',
+  3 -- high priority
+);
+
+-- 2. Query milestone tasks for a phase
+SELECT 
+  t.task_name,
+  t.description,
+  t.due_date,
+  t.status,
+  t.priority,
+  p.first_name || ' ' || p.last_name as owner_name,
+  tt.type_name as task_type
+FROM tasks t
+JOIN people p ON t.owner_id = p.person_id
+JOIN task_types tt ON t.task_type_id = tt.task_type_id
+WHERE t.phase_id = 1 
+  AND t.task_type_id = 9
+ORDER BY t.due_date ASC;
+
+-- 3. Update milestone task status
+UPDATE tasks SET 
+  status = 'in_progress',
+  notes = 'Started manager assessment process'
+WHERE task_id = ? AND task_type_id = 9;
 ```
 
 ---

@@ -8,12 +8,14 @@ import {
   CalendarDays,
   BarChart3,
   CheckSquare,
-  Video
+  Video,
+  Clock
 } from 'lucide-react';
 import type { NavigationItem } from '../../lib/types';
 
 const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/', icon: 'BarChart3', current: false },
+  { name: 'Daily Planner', href: '/daily-planner', icon: 'Clock', current: false },
   { name: 'Phases', href: '/phases', icon: 'Calendar', current: false },
   { name: 'Tasks', href: '/tasks', icon: 'CheckSquare', current: false },
   { name: 'Meetings', href: '/meetings', icon: 'Video', current: false },
@@ -32,6 +34,7 @@ const iconMap = {
   Building2,
   CalendarDays,
   Video,
+  Clock,
 };
 
 const Sidebar: React.FC = () => {

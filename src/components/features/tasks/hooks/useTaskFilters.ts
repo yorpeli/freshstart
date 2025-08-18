@@ -52,7 +52,7 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
       return { 'All Tasks': filteredTasks };
     }
     
-    return filteredTasks.reduce((groups, task) => {
+    const groups = filteredTasks.reduce((groups, task) => {
       let groupKey: string;
       switch (filters.groupBy) {
         case 'phase':
@@ -64,6 +64,45 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
         case 'status':
           groupKey = task.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
           break;
+        case 'date':
+          if (task.due_date) {
+            const dueDate = new Date(task.due_date);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            if (dueDate < today) {
+              groupKey = 'Overdue';
+            } else if (dueDate.toDateString() === today.toDateString()) {
+              groupKey = 'Due Today';
+            } else if (dueDate.toDateString() === tomorrow.toDateString()) {
+              groupKey = 'Due Tomorrow';
+            } else if (dueDate.getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000) {
+              groupKey = 'Due This Week';
+            } else {
+              // Group by calendar month
+              const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+              ];
+              const month = monthNames[dueDate.getMonth()];
+              const year = dueDate.getFullYear();
+              const currentYear = today.getFullYear();
+              
+              if (year === currentYear) {
+                groupKey = month;
+              } else if (year === currentYear + 1) {
+                groupKey = `${month} ${year}`;
+              } else if (year === currentYear - 1) {
+                groupKey = `${month} ${year}`;
+              } else {
+                groupKey = `${month} ${year}`;
+              }
+            }
+          } else {
+            groupKey = 'No Due Date';
+          }
+          break;
         default:
           groupKey = 'All Tasks';
       }
@@ -72,6 +111,72 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
       groups[groupKey].push(task);
       return groups;
     }, {} as Record<string, TaskWithRelations[]>);
+
+    // Sort date groups in chronological order
+    if (filters.groupBy === 'date') {
+      const sortedGroups: Record<string, TaskWithRelations[]> = {};
+      const groupOrder = [
+        'Overdue',
+        'Due Today', 
+        'Due Tomorrow',
+        'Due This Week'
+      ];
+      
+      // Add immediate groups first
+      groupOrder.forEach(key => {
+        if (groups[key]) {
+          sortedGroups[key] = groups[key];
+        }
+      });
+      
+      // Add month groups in chronological order
+      const monthGroups = Object.keys(groups).filter(key => 
+        !groupOrder.includes(key) && key !== 'No Due Date'
+      );
+      
+      monthGroups.sort((a, b) => {
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        
+        // Extract month and year from group keys
+        const getMonthYear = (key: string) => {
+          const parts = key.split(' ');
+          if (parts.length === 1) {
+            // Current year, just month name
+            const monthIndex = monthNames.indexOf(parts[0]);
+            return { month: monthIndex, year: new Date().getFullYear() };
+          } else {
+            // Month + year format
+            const monthIndex = monthNames.indexOf(parts[0]);
+            const year = parseInt(parts[1]);
+            return { month: monthIndex, year };
+          }
+        };
+        
+        const aInfo = getMonthYear(a);
+        const bInfo = getMonthYear(b);
+        
+        if (aInfo.year !== bInfo.year) {
+          return aInfo.year - bInfo.year;
+        }
+        return aInfo.month - bInfo.month;
+      });
+      
+      monthGroups.forEach(key => {
+        sortedGroups[key] = groups[key];
+      });
+      
+      // Add "No Due Date" at the end
+      if (groups['No Due Date']) {
+        sortedGroups['No Due Date'] = groups['No Due Date'];
+      }
+      
+      return sortedGroups;
+    }
+    
+    return groups;
   }, [filteredTasks, filters.groupBy]);
 
   return {

@@ -62,6 +62,7 @@ const TasksFilters: React.FC<TasksFiltersProps> = ({
             <option value="phase">Group by Phase</option>
             <option value="type">Group by Type</option>
             <option value="status">Group by Status</option>
+            <option value="date">Group by Date</option>
             <option value="none">No Grouping</option>
           </select>
         </div>
