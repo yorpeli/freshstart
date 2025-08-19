@@ -6,7 +6,7 @@ import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, eachDayOfInt
 const DailyPlannerView: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isTaskPanelExpanded, setIsTaskPanelExpanded] = useState(true);
-  const [viewMode, setViewMode] = useState<'1day' | '3days' | 'week'>('1day');
+  const [viewMode, setViewMode] = useState<'1day' | '3days' | 'week'>('3days');
 
   console.log('DailyPlannerView - Current selectedDate:', selectedDate.toISOString());
 
