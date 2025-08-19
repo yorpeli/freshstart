@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, ChevronLeft as ChevronLeftIcon } from 'lucide-react';
-import { TimeBlockedSchedule, TaskList } from '../features/dailyPlanner';
+import { TimeBlockedScheduleWithQuickModal, TaskList } from '../features/dailyPlanner';
 import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 
 const DailyPlannerView: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isTaskPanelExpanded, setIsTaskPanelExpanded] = useState(true);
   const [viewMode, setViewMode] = useState<'1day' | '3days' | 'week'>('1day');
+
+  console.log('DailyPlannerView - Current selectedDate:', selectedDate.toISOString());
 
   const goToPreviousDay = () => {
     if (viewMode === '1day') {
@@ -53,6 +55,9 @@ const DailyPlannerView: React.FC = () => {
     }
     return [selectedDate];
   };
+
+  const viewRange = getViewRange();
+  console.log('DailyPlannerView - View range:', viewRange.map(d => d.toISOString()));
 
   return (
     <div className="flex-1 overflow-hidden">
@@ -149,10 +154,10 @@ const DailyPlannerView: React.FC = () => {
            <div className={`flex-1 overflow-y-auto transition-all duration-300 ${
              isTaskPanelExpanded ? 'mr-0' : 'mr-0'
            }`}>
-             <TimeBlockedSchedule 
+             <TimeBlockedScheduleWithQuickModal 
                selectedDate={selectedDate} 
                viewMode={viewMode}
-               viewRange={getViewRange()}
+               viewRange={viewRange}
              />
            </div>
 

@@ -5,7 +5,9 @@ const initialFilters: TasksFiltersState = {
   searchQuery: '',
   statusFilter: 'all',
   taskTypeFilter: 'all',
-  groupBy: 'phase'
+  groupBy: 'phase',
+  sortBy: 'due_date',
+  sortOrder: 'asc'
 };
 
 export const useTaskFilters = (tasks: TaskWithRelations[]) => {
@@ -28,8 +30,9 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
     setExpandedGroups(newExpanded);
   };
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+  const sortedAndFilteredTasks = useMemo(() => {
+    // First filter
+    const filtered = tasks.filter(task => {
       const searchLower = filters.searchQuery.toLowerCase().trim();
       
       const matchesSearch = filters.searchQuery === '' || 
@@ -45,14 +48,56 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
       
       return matchesSearch && matchesStatus && matchesType;
     });
+
+    // Then sort
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (filters.sortBy) {
+        case 'due_date':
+          aValue = a.due_date ? new Date(a.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+          bValue = b.due_date ? new Date(b.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+          break;
+        case 'priority':
+          // Higher priority number = lower priority, so we reverse the comparison
+          aValue = a.priority || 999; // No priority = lowest priority
+          bValue = b.priority || 999;
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        case 'task_name':
+          aValue = a.task_name.toLowerCase();
+          bValue = b.task_name.toLowerCase();
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at).getTime();
+          bValue = new Date(b.created_at).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return filters.sortOrder === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return filters.sortOrder === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return sorted;
   }, [tasks, filters]);
 
   const groupedTasks = useMemo(() => {
     if (filters.groupBy === 'none') {
-      return { 'All Tasks': filteredTasks };
+      return { 'All Tasks': sortedAndFilteredTasks };
     }
     
-    const groups = filteredTasks.reduce((groups, task) => {
+    const groups = sortedAndFilteredTasks.reduce((groups, task) => {
       let groupKey: string;
       switch (filters.groupBy) {
         case 'phase':
@@ -177,12 +222,12 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
     }
     
     return groups;
-  }, [filteredTasks, filters.groupBy]);
+  }, [sortedAndFilteredTasks, filters.groupBy]);
 
   return {
     filters,
     expandedGroups,
-    filteredTasks,
+    filteredTasks: sortedAndFilteredTasks,
     groupedTasks,
     updateFilters,
     toggleGroup

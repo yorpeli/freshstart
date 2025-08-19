@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { X, Calendar, Clock, User, Target, FileText, MessageSquare, Lightbulb, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import Modal from '../../../ui/Modal';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, User, Target, FileText, MessageSquare, ArrowUpRight, ArrowDownRight, Edit, Save, XCircle } from 'lucide-react';
 import Badge from '../../../ui/Badge';
 import type { TaskWithRelations } from '../types';
-import Card from '../../../ui/Card';
+import { useTaskTypes } from '../hooks/useTaskTypes';
+import { usePeopleWithRelations, usePhases } from '../../../../hooks/useSupabaseQuery';
+import { supabase } from '../../../../lib/supabase';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface TaskDetailModalProps {
   task: TaskWithRelations;
@@ -11,7 +13,111 @@ interface TaskDetailModalProps {
   onClose: () => void;
 }
 
+interface TaskEditForm {
+  task_name: string;
+  description: string;
+  status: string;
+  priority: number | null;
+  start_date: string;
+  due_date: string;
+  owner_id: number;
+  task_type_id: number | null;
+  phase_id: number;
+  notes: string;
+}
+
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<TaskEditForm>(() => ({
+    task_name: task.task_name,
+    description: task.description || '',
+    status: task.status,
+    priority: task.priority,
+    start_date: task.start_date || '',
+    due_date: task.due_date || '',
+    owner_id: task.owner_id,
+    task_type_id: task.task_type_id,
+    phase_id: task.phase_id,
+    notes: task.notes || ''
+  }));
+  
+  const queryClient = useQueryClient();
+  const { data: taskTypes = [] } = useTaskTypes();
+  const { data: people = [] } = usePeopleWithRelations();
+  const { data: phases = [] } = usePhases();
+  
+  const updateTaskMutation = useMutation({
+    mutationFn: async (updatedTask: Partial<TaskEditForm>) => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updatedTask)
+        .eq('task_id', task.task_id)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      console.error('Error updating task:', error);
+      alert('Failed to update task. Please try again.');
+    }
+  });
+  
+  const handleSave = () => {
+    const updatedFields: Partial<TaskEditForm> = {};
+    
+    // Only include changed fields
+    if (editForm.task_name !== task.task_name) updatedFields.task_name = editForm.task_name;
+    if (editForm.description !== (task.description || '')) updatedFields.description = editForm.description || null;
+    if (editForm.status !== task.status) updatedFields.status = editForm.status;
+    if (editForm.priority !== task.priority) updatedFields.priority = editForm.priority;
+    if (editForm.start_date !== (task.start_date || '')) updatedFields.start_date = editForm.start_date || null;
+    if (editForm.due_date !== (task.due_date || '')) updatedFields.due_date = editForm.due_date || null;
+    if (editForm.owner_id !== task.owner_id) updatedFields.owner_id = editForm.owner_id;
+    if (editForm.task_type_id !== task.task_type_id) updatedFields.task_type_id = editForm.task_type_id;
+    if (editForm.phase_id !== task.phase_id) updatedFields.phase_id = editForm.phase_id;
+    if (editForm.notes !== (task.notes || '')) updatedFields.notes = editForm.notes || null;
+    
+    if (Object.keys(updatedFields).length > 0) {
+      updateTaskMutation.mutate(updatedFields);
+    } else {
+      setIsEditing(false);
+    }
+  };
+  
+  const resetForm = () => ({
+    task_name: task.task_name,
+    description: task.description || '',
+    status: task.status,
+    priority: task.priority,
+    start_date: task.start_date || '',
+    due_date: task.due_date || '',
+    owner_id: task.owner_id,
+    task_type_id: task.task_type_id,
+    phase_id: task.phase_id,
+    notes: task.notes || ''
+  });
+
+  const handleCancel = () => {
+    setEditForm(resetForm());
+    setIsEditing(false);
+  };
+
+  // Reset form when task changes
+  useEffect(() => {
+    const newForm = resetForm();
+    setEditForm(newForm);
+    setIsEditing(false);
+  }, [task.task_id, task.task_name, task.description, task.status, task.priority, task.start_date, task.due_date, task.owner_id, task.task_type_id, task.phase_id, task.notes]);
+  
   if (!isOpen) return null;
 
   const getStatusColor = (status: string): string => {
@@ -50,9 +156,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-gray-200">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              {task.task_name}
-            </h2>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editForm.task_name}
+                onChange={(e) => setEditForm({ ...editForm, task_name: e.target.value })}
+                className="text-xl font-semibold text-gray-900 mb-2 w-full bg-transparent border-b border-gray-300 focus:border-primary-500 focus:outline-none"
+                placeholder="Task name"
+              />
+            ) : (
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                {task.task_name}
+              </h2>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               {task.task_type && (
                 <div className="flex items-center gap-2">
@@ -68,12 +184,42 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X size={20} className="text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2 ml-4">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={updateTaskMutation.isPending}
+                  className="p-2 hover:bg-green-100 rounded-full transition-colors text-green-600 disabled:opacity-50"
+                  title="Save changes"
+                >
+                  <Save size={20} />
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={updateTaskMutation.isPending}
+                  className="p-2 hover:bg-red-100 rounded-full transition-colors text-red-600 disabled:opacity-50"
+                  title="Cancel editing"
+                >
+                  <XCircle size={20} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-2 hover:bg-blue-100 rounded-full transition-colors text-blue-600"
+                title="Edit task"
+              >
+                <Edit size={20} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={20} className="text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -83,32 +229,72 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
             <div>
               <span className="text-sm font-medium text-gray-500">Status</span>
               <div className="mt-1">
-                <Badge className={getStatusColor(task.status)}>
-                  {task.status.replace('_', ' ')}
-                </Badge>
+                {isEditing ? (
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  >
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                ) : (
+                  <Badge className={getStatusColor(task.status)}>
+                    {task.status.replace('_', ' ')}
+                  </Badge>
+                )}
               </div>
             </div>
-            {task.priority && (
-              <div>
-                <span className="text-sm font-medium text-gray-500">Priority</span>
-                <div className="mt-1">
-                  <Badge className={getPriorityColor(task.priority)}>
-                    P{task.priority}
-                  </Badge>
-                </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Priority</span>
+              <div className="mt-1">
+                {isEditing ? (
+                  <select
+                    value={editForm.priority || ''}
+                    onChange={(e) => setEditForm({ ...editForm, priority: e.target.value ? parseInt(e.target.value) : null })}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  >
+                    <option value="">No Priority</option>
+                    <option value="1">P1 (High)</option>
+                    <option value="2">P2 (Medium)</option>
+                    <option value="3">P3 (Low)</option>
+                  </select>
+                ) : (
+                  task.priority ? (
+                    <Badge className={getPriorityColor(task.priority)}>
+                      P{task.priority}
+                    </Badge>
+                  ) : (
+                    <span className="text-gray-500 text-sm">No priority</span>
+                  )
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Description */}
-          {task.description && (
-            <div>
-              <span className="text-sm font-medium text-gray-500">Description</span>
-              <div className="mt-2">
-                <p className="text-gray-700 leading-relaxed">{task.description}</p>
-              </div>
+          <div>
+            <span className="text-sm font-medium text-gray-500">Description</span>
+            <div className="mt-2">
+              {isEditing ? (
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-primary-500 focus:outline-none resize-vertical"
+                  rows={3}
+                  placeholder="Task description"
+                />
+              ) : (
+                task.description ? (
+                  <p className="text-gray-700 leading-relaxed">{task.description}</p>
+                ) : (
+                  <span className="text-gray-500 text-sm italic">No description</span>
+                )
+              )}
             </div>
-          )}
+          </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
@@ -116,14 +302,32 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
               <span className="text-sm font-medium text-gray-500">Start Date</span>
               <div className="mt-1 flex items-center gap-2">
                 <Calendar size={16} className="text-gray-400" />
-                <p className="text-gray-700">{formatDate(task.start_date)}</p>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={editForm.start_date}
+                    onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  />
+                ) : (
+                  <p className="text-gray-700">{formatDate(task.start_date)}</p>
+                )}
               </div>
             </div>
             <div>
               <span className="text-sm font-medium text-gray-500">Due Date</span>
               <div className="mt-1 flex items-center gap-2">
                 <Clock size={16} className="text-gray-400" />
-                <p className="text-gray-700">{formatDate(task.due_date)}</p>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  />
+                ) : (
+                  <p className="text-gray-700">{formatDate(task.due_date)}</p>
+                )}
               </div>
             </div>
           </div>
@@ -133,29 +337,81 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
             <span className="text-sm font-medium text-gray-500">Owner</span>
             <div className="mt-1 flex items-center gap-2">
               <User size={16} className="text-gray-400" />
-              <p className="text-gray-700">{task.owner_name}</p>
+              {isEditing ? (
+                <select
+                  value={editForm.owner_id}
+                  onChange={(e) => setEditForm({ ...editForm, owner_id: parseInt(e.target.value) })}
+                  className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                >
+                  {people.map((person) => (
+                    <option key={person.person_id} value={person.person_id}>
+                      {person.first_name} {person.last_name || ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-gray-700">{task.owner_name}</p>
+              )}
             </div>
           </div>
 
-          {/* Phase and Initiative */}
+          {/* Phase and Task Type */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <span className="text-sm font-medium text-gray-500">Phase</span>
               <div className="mt-1 flex items-center gap-2">
                 <Target size={16} className="text-gray-400" />
-                <p className="text-gray-700">{task.phase_name}</p>
+                {isEditing ? (
+                  <select
+                    value={editForm.phase_id}
+                    onChange={(e) => setEditForm({ ...editForm, phase_id: parseInt(e.target.value) })}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  >
+                    {phases.map((phase) => (
+                      <option key={phase.phase_id} value={phase.phase_id}>
+                        {phase.phase_name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-gray-700">{task.phase_name}</p>
+                )}
               </div>
             </div>
-            {task.initiative_name && (
-              <div>
-                <span className="text-sm font-medium text-gray-500">Initiative</span>
-                <div className="mt-1 flex items-center gap-2">
-                  <FileText size={16} className="text-gray-400" />
-                  <p className="text-gray-700">{task.initiative_name}</p>
-                </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Task Type</span>
+              <div className="mt-1 flex items-center gap-2">
+                <FileText size={16} className="text-gray-400" />
+                {isEditing ? (
+                  <select
+                    value={editForm.task_type_id || ''}
+                    onChange={(e) => setEditForm({ ...editForm, task_type_id: e.target.value ? parseInt(e.target.value) : null })}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  >
+                    <option value="">No Type</option>
+                    {taskTypes.map((type) => (
+                      <option key={type.task_type_id} value={type.task_type_id}>
+                        {type.type_name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-gray-700">{task.task_type?.type_name || 'No type'}</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
+          
+          {/* Initiative (read-only) */}
+          {task.initiative_name && (
+            <div>
+              <span className="text-sm font-medium text-gray-500">Initiative</span>
+              <div className="mt-1 flex items-center gap-2">
+                <FileText size={16} className="text-gray-400" />
+                <p className="text-gray-700">{task.initiative_name}</p>
+              </div>
+            </div>
+          )}
 
           {/* Task Relationships */}
           {(task.parent_task_id || (task.subtasks && task.subtasks.length > 0)) && (
@@ -179,14 +435,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
           )}
 
           {/* Notes */}
-          {task.notes && (
-            <div>
-              <span className="text-sm font-medium text-gray-500">Notes</span>
-              <div className="mt-2">
-                <p className="text-gray-700 leading-relaxed">{task.notes}</p>
-              </div>
+          <div>
+            <span className="text-sm font-medium text-gray-500">Notes</span>
+            <div className="mt-2">
+              {isEditing ? (
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-primary-500 focus:outline-none resize-vertical"
+                  rows={3}
+                  placeholder="Task notes"
+                />
+              ) : (
+                task.notes ? (
+                  <p className="text-gray-700 leading-relaxed">{task.notes}</p>
+                ) : (
+                  <span className="text-gray-500 text-sm italic">No notes</span>
+                )
+              )}
             </div>
-          )}
+          </div>
 
           {/* Source Meeting */}
           {task.source_meeting_id && (

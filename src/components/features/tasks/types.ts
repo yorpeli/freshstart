@@ -12,6 +12,8 @@ export interface TasksFiltersState {
   statusFilter: string;
   taskTypeFilter: string;
   groupBy: 'phase' | 'type' | 'status' | 'date' | 'none';
+  sortBy: 'due_date' | 'priority' | 'status' | 'task_name' | 'created_at';
+  sortOrder: 'asc' | 'desc';
 }
 
 export interface TasksTableProps {

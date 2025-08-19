@@ -2,11 +2,13 @@ import React from 'react';
 import { Clock, Video, CheckSquare, MoreVertical } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
 import { useMeetings } from '../../../hooks/useMeetings';
+import type { Meeting } from '../../../hooks/useMeetings';
 
 interface TimeBlockedScheduleProps {
   selectedDate: Date;
   viewMode: '1day' | '3days' | 'week';
   viewRange: Date[];
+  onMeetingClick?: (meeting: Meeting) => void;
 }
 
 interface TimeBlock {
@@ -23,12 +25,21 @@ interface TimeBlock {
   meetingType?: string;
   attendees?: string[];
   meetingId?: number; // For real meetings from Supabase
+  originalMeeting?: Meeting; // Store the original meeting data for click handlers
 }
 
-const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate, viewMode, viewRange }) => {
+const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate, viewMode, viewRange, onMeetingClick }) => {
   // Get the date range for the current view
   const startDate = viewRange[0];
   const endDate = viewRange[viewRange.length - 1];
+  
+  console.log('TimeBlockedSchedule - Props:', {
+    selectedDate: selectedDate.toISOString(),
+    viewMode,
+    viewRange: viewRange.map(d => d.toISOString()),
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString()
+  });
   
   // Fetch real meetings from Supabase
   const { data: meetings, isLoading, error } = useMeetings(startDate, endDate);
@@ -37,10 +48,21 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
   const timeBlocks: TimeBlock[] = React.useMemo(() => {
     if (!meetings) return [];
 
+    console.log('TimeBlockedSchedule - Processing meetings:', meetings);
+
     return meetings.map((meeting) => {
       const meetingDate = parseISO(meeting.scheduled_date);
       const startTime = format(meetingDate, 'HH:mm');
       const endTime = format(new Date(meetingDate.getTime() + meeting.duration_minutes * 60000), 'HH:mm');
+      
+      console.log('TimeBlockedSchedule - Meeting block:', {
+        meeting: meeting.meeting_name,
+        scheduled_date: meeting.scheduled_date,
+        parsedDate: meetingDate.toISOString(),
+        startTime,
+        endTime,
+        duration: meeting.duration_minutes
+      });
       
       return {
         id: `meeting-${meeting.meeting_id}`,
@@ -55,6 +77,7 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
         meetingType: meeting.meeting_type,
         attendees: meeting.attendees,
         meetingId: meeting.meeting_id,
+        originalMeeting: meeting, // Store the original meeting data
       };
     });
   }, [meetings]);
@@ -202,7 +225,7 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
              {/* Time Grid */}
        <div className="relative bg-white border border-gray-200 rounded-lg overflow-hidden">
          {/* Time Labels */}
-         <div className="absolute left-0 top-0 w-16 bg-gray-50 border-r border-gray-200">
+         <div className={`absolute left-0 w-16 bg-gray-50 border-r border-gray-200 ${viewMode !== '1day' ? 'top-12' : 'top-0'}`}>
            {timeSlots.map((slot) => (
              <div
                key={slot.time}
@@ -289,6 +312,11 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
                     left: dayLeft,
                     width: dayWidth,
                     maxWidth: dayWidth,
+                  }}
+                  onClick={() => {
+                    if (block.type === 'meeting' && block.originalMeeting && onMeetingClick) {
+                      onMeetingClick(block.originalMeeting);
+                    }
                   }}
                 >
                   <div className="flex items-start justify-between h-full">

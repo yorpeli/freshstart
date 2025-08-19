@@ -53,6 +53,27 @@ const TasksFilters: React.FC<TasksFiltersProps> = ({
             ))}
           </select>
 
+          {/* Sort By */}
+          <select
+            value={`${filters.sortBy}-${filters.sortOrder}`}
+            onChange={(e) => {
+              const [sortBy, sortOrder] = e.target.value.split('-') as [any, 'asc' | 'desc'];
+              onFiltersChange({ sortBy, sortOrder });
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="due_date-asc">Due Date (Oldest First)</option>
+            <option value="due_date-desc">Due Date (Newest First)</option>
+            <option value="priority-asc">Priority (Low to High)</option>
+            <option value="priority-desc">Priority (High to Low)</option>
+            <option value="status-asc">Status (A-Z)</option>
+            <option value="status-desc">Status (Z-A)</option>
+            <option value="task_name-asc">Task Name (A-Z)</option>
+            <option value="task_name-desc">Task Name (Z-A)</option>
+            <option value="created_at-desc">Recently Created</option>
+            <option value="created_at-asc">Oldest Created</option>
+          </select>
+
           {/* Group By */}
           <select
             value={filters.groupBy}
