@@ -6,6 +6,7 @@ import MeetingStatusCard from './MeetingStatusCard';
 import { useMeetingPermissions } from './useMeetingPermissions';
 import { TemplateEditorWithPreview } from '../TemplateEditor';
 import NotesManager from './NotesManager';
+import AttendeeManager from './AttendeeManager';
 
 interface DetailedMeeting {
   meeting_id: number;
@@ -51,8 +52,8 @@ interface Attendee {
   person_id: number;
   first_name: string;
   last_name: string;
-  role_in_meeting: string;
-  attendance_status: string;
+  role_in_meeting: 'organizer' | 'required' | 'optional';
+  attendance_status: 'invited' | 'accepted' | 'declined' | 'present' | 'absent';
   email: string | null;
   role_title: string | null;
   department_name: string;
@@ -194,6 +195,18 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
     }, 7000);
   }, [meetingId]);
 
+  // Handler for attendee changes
+  const handleAttendeesChange = useCallback((newAttendees: Attendee[]) => {
+    // Update local state optimistically
+    queryClient.setQueryData(['meeting-detail', meetingId], (oldData: any) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        attendees: newAttendees
+      };
+    });
+  }, [meetingId, queryClient]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -245,10 +258,59 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
         hasUnsavedChanges={hasUnsavedChanges}
       />
 
-      <MeetingStatusCard
-        meeting={meeting}
-        attendees={attendees}
-      />
+      {/* Status Card and Objectives & Messages Section - Always Visible */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+        {/* Objectives & Messages - Left side, 50% width */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🎯</span>
+            <h3 className="text-lg font-medium text-gray-900">Objectives & Messages</h3>
+          </div>
+          <div className="space-y-3 flex-1 min-h-0">
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-2.5 hover:bg-blue-100 transition-colors duration-200">
+              <h4 className="text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                <span className="text-blue-600">📋</span>
+                Meeting Objectives
+              </h4>
+              <div className="flex items-start justify-between">
+                <p className="text-sm text-gray-900 flex-1 leading-tight">
+                  {meeting.meeting_objectives || 'None specified'}
+                </p>
+                {permissions.canEditMeetingDetails && (
+                  <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline ml-2 flex-shrink-0 transition-all duration-200 hover:bg-blue-100 hover:scale-105 px-2 py-1 rounded font-medium">
+                    Edit
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded-lg p-2.5 hover:bg-green-100 transition-colors duration-200">
+              <h4 className="text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                <span className="text-green-600">💬</span>
+                Key Messages
+              </h4>
+              <div className="flex items-start justify-between">
+                <p className="text-sm text-gray-900 flex-1 leading-relaxed">
+                  {meeting.key_messages || 'None specified'}
+                </p>
+                {permissions.canEditMeetingDetails && (
+                  <button className="text-xs text-green-600 hover:text-green-800 hover:underline ml-2 flex-shrink-0 transition-colors duration-200 hover:bg-green-100 px-2 py-1 rounded">
+                    Edit
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Card - Right side, 50% width */}
+        <div className="shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
+          <MeetingStatusCard
+            meeting={meeting}
+            attendees={attendees}
+            className="flex-1"
+          />
+        </div>
+      </div>
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
@@ -348,33 +410,6 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
                   </div>
                 </dl>
               </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Objectives & Messages</h4>
-                <dl className="space-y-2">
-                  <div>
-                    <dt className="text-sm text-gray-500">Meeting Objectives</dt>
-                    <dd className="flex items-start justify-between">
-                      <span className="text-sm text-gray-900 flex-1">{meeting.meeting_objectives || 'None specified'}</span>
-                      {permissions.canEditMeetingDetails && (
-                        <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline ml-2">
-                          Edit
-                        </button>
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-500">Key Messages</dt>
-                    <dd className="flex items-start justify-between">
-                      <span className="text-sm text-gray-900 flex-1">{meeting.key_messages || 'None specified'}</span>
-                      {permissions.canEditMeetingDetails && (
-                        <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline ml-2">
-                          Edit
-                        </button>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
             </div>
           </div>
         )}
@@ -423,73 +458,12 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
         )}
 
         {activeTab === 'attendees' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Meeting Attendees</h3>
-              {permissions.canEditAttendees && (
-                <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline">
-                  Manage Attendees
-                </button>
-              )}
-            </div>
-            
-            {!permissions.canEditAttendees && meeting.status === 'in-progress' && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
-                  👥 <strong>Attendance Tracking:</strong> You can update attendance status during the meeting.
-                </p>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {attendees.map((attendee) => (
-                <div key={attendee.person_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-blue-600">
-                        {attendee.first_name.charAt(0)}{attendee.last_name.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {attendee.first_name} {attendee.last_name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {attendee.role_title} • {attendee.department_name}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-500 capitalize">
-                      {attendee.role_in_meeting}
-                    </div>
-                    {meeting.status === 'in-progress' ? (
-                      <select
-                        value={attendee.attendance_status}
-                        onChange={(e) => console.log('Update attendance:', attendee.person_id, e.target.value)}
-                        className={`text-xs px-2 py-1 rounded border ${
-                          attendee.attendance_status === 'accepted' || attendee.attendance_status === 'present' ? 'bg-green-100 text-green-800 border-green-300' :
-                          attendee.attendance_status === 'declined' || attendee.attendance_status === 'absent' ? 'bg-red-100 text-red-800 border-red-300' :
-                          'bg-blue-100 text-blue-800 border-blue-300'
-                        }`}
-                      >
-                        <option value="present">Present</option>
-                        <option value="absent">Absent</option>
-                      </select>
-                    ) : (
-                      <div className={`text-xs px-2 py-1 rounded ${
-                        attendee.attendance_status === 'accepted' ? 'bg-green-100 text-green-800' :
-                        attendee.attendance_status === 'declined' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {attendee.attendance_status}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <AttendeeManager
+            attendees={attendees}
+            onAttendeesChange={handleAttendeesChange}
+            meetingStatus={meeting.status}
+            meetingId={meeting.meeting_id}
+          />
         )}
       </div>
     </div>

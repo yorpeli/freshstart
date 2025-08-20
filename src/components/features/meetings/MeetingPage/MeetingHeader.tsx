@@ -101,7 +101,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = ({
         };
       case 'scheduled':
         return {
-          label: 'Start Meeting',
+          label: 'Start',
           icon: Play,
           variant: 'success' as const,
           action: () => setStatusChangeDialog({ isOpen: true, newStatus: 'in-progress' })
@@ -153,7 +153,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = ({
       case 'scheduled':
         actions.push(
           { 
-            label: 'Edit Details', 
+            label: 'Edit', 
             icon: Settings, 
             action: () => console.log('Edit details'),
             tooltip: 'Edit meeting details and agenda'
@@ -165,7 +165,7 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = ({
             tooltip: 'Change meeting date and time'
           },
           { 
-            label: 'Cancel Meeting', 
+            label: 'Cancel', 
             icon: X, 
             action: () => setStatusChangeDialog({ isOpen: true, newStatus: 'cancelled' }), 
             variant: 'danger' as const,
@@ -271,9 +271,9 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = ({
   const secondaryActions = getSecondaryActions();
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
       {/* Header Row */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/meetings')}
@@ -334,43 +334,38 @@ const MeetingHeader: React.FC<MeetingHeaderProps> = ({
       </div>
 
       {/* Meeting Info Row */}
-      <div className="flex items-center gap-6 text-sm text-gray-600">
-        <div className="flex items-center gap-2">
-          <Calendar size={16} />
-          <span>{formatDate(meeting.scheduled_date)}</span>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs text-gray-600">
+        <div className="flex items-center gap-1.5">
+          <Calendar size={14} />
+          <span className="truncate">{formatDate(meeting.scheduled_date)}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock size={16} />
-          <span>{meeting.duration_minutes} minutes</span>
+        <div className="flex items-center gap-1.5">
+          <Clock size={14} />
+          <span>{meeting.duration_minutes}m</span>
         </div>
         {meeting.location_platform && (
-          <div className="flex items-center gap-2">
-            <MapPin size={16} />
-            <span>{meeting.location_platform}</span>
+          <div className="flex items-center gap-1.5">
+            <MapPin size={14} />
+            <span className="truncate">{meeting.location_platform}</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className="text-gray-500">Type:</span>
-          <span>{meeting.meeting_types.type_name}</span>
+          <span className="truncate">{meeting.meeting_types.type_name}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className="text-gray-500">Phase:</span>
-          <span>{meeting.phases.phase_number}. {meeting.phases.phase_name}</span>
+          <span className="truncate">{meeting.phases.phase_number}. {meeting.phases.phase_name}</span>
         </div>
         {meeting.initiatives && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="text-gray-500">Initiative:</span>
-            <span>{meeting.initiatives.initiative_name}</span>
+            <span className="truncate">{meeting.initiatives.initiative_name}</span>
           </div>
         )}
       </div>
 
-      {/* Last Updated Info */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <div className="text-xs text-gray-500">
-          Last updated: {new Date(meeting.updated_at).toLocaleString()}
-        </div>
-      </div>
+
 
       {/* Status Change Dialog */}
       <StatusChangeDialog

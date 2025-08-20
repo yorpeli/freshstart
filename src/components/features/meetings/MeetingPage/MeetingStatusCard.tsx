@@ -242,6 +242,9 @@ const MeetingStatusCard: React.FC<MeetingStatusCardProps> = ({
                 : `Updated ${progressInfo.hoursSinceUpdate} hour${progressInfo.hoursSinceUpdate !== 1 ? 's' : ''} ago`
               }
             </p>
+            <p className="text-xs text-gray-400">
+              Last updated: {new Date(meeting.updated_at).toLocaleString()}
+            </p>
           </div>
         </div>
       </div>
