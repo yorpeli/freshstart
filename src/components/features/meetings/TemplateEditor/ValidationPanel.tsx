@@ -14,12 +14,16 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
   className = '',
   onErrorClick
 }) => {
-  const getErrorIcon = (type: ValidationError['type']) => {
+  const getErrorIcon = (type: ValidationError['type'], priority: ValidationError['priority']) => {
     switch (type) {
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return priority === 'critical' 
+          ? <XCircle className="h-4 w-4 text-red-700" />
+          : <XCircle className="h-4 w-4 text-red-600" />;
       case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-amber-600" />;
+        return priority === 'high'
+          ? <AlertTriangle className="h-4 w-4 text-amber-700" />
+          : <AlertTriangle className="h-4 w-4 text-amber-600" />;
       case 'info':
         return <Info className="h-4 w-4 text-blue-600" />;
       default:
@@ -27,16 +31,40 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
     }
   };
 
-  const getErrorStyles = (type: ValidationError['type']) => {
+  const getErrorStyles = (type: ValidationError['type'], priority: ValidationError['priority']) => {
     switch (type) {
       case 'error':
-        return 'border-red-200 bg-red-50 text-red-800';
+        return priority === 'critical'
+          ? 'border-red-300 bg-red-100 text-red-900'
+          : 'border-red-200 bg-red-50 text-red-800';
       case 'warning':
-        return 'border-amber-200 bg-amber-50 text-amber-800';
+        return priority === 'high'
+          ? 'border-amber-300 bg-amber-100 text-amber-900'
+          : 'border-amber-200 bg-amber-50 text-amber-800';
       case 'info':
         return 'border-blue-200 bg-blue-50 text-blue-800';
       default:
         return 'border-gray-200 bg-gray-50 text-gray-800';
+    }
+  };
+
+  const getPriorityLabel = (priority: ValidationError['priority']) => {
+    switch (priority) {
+      case 'critical': return 'Critical';
+      case 'high': return 'High';
+      case 'medium': return 'Medium';
+      case 'low': return 'Low';
+      default: return 'Unknown';
+    }
+  };
+
+  const getPriorityColor = (priority: ValidationError['priority']) => {
+    switch (priority) {
+      case 'critical': return 'text-red-700 bg-red-100';
+      case 'high': return 'text-amber-700 bg-amber-100';
+      case 'medium': return 'text-blue-700 bg-blue-100';
+      case 'low': return 'text-gray-700 bg-gray-100';
+      default: return 'text-gray-700 bg-gray-100';
     }
   };
 
@@ -94,25 +122,24 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
             {allIssues.map((issue, index) => (
               <div
                 key={index}
-                className={`border rounded-lg p-3 cursor-pointer hover:opacity-80 transition-opacity ${getErrorStyles(issue.type)}`}
+                className={`border rounded-lg p-3 cursor-pointer hover:opacity-80 transition-opacity ${getErrorStyles(issue.type, issue.priority)}`}
                 onClick={() => onErrorClick?.(issue)}
               >
                 <div className="flex items-start gap-2">
-                  {getErrorIcon(issue.type)}
+                  {getErrorIcon(issue.type, issue.priority)}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {issue.field.charAt(0).toUpperCase() + issue.field.slice(1).replace('_', ' ')}
+                      <span className="font-medium">{issue.field}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(issue.priority)}`}>
+                        {getPriorityLabel(issue.priority)}
                       </span>
                       {issue.sectionIndex !== undefined && (
-                        <span className="text-xs px-2 py-0.5 bg-white bg-opacity-50 rounded">
+                        <span className="text-xs text-gray-500">
                           Section {issue.sectionIndex + 1}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm opacity-90 mt-1">
-                      {issue.message}
-                    </p>
+                    <p className="text-sm mt-1">{issue.message}</p>
                   </div>
                 </div>
               </div>
