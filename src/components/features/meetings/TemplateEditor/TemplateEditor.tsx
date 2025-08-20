@@ -23,6 +23,98 @@ import { validateTemplate } from './templateValidation';
 import type { ValidationError } from './templateValidation';
 import ValidationPanel from './ValidationPanel';
 
+// Debounced input component for better performance
+interface DebouncedInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  type?: 'text' | 'textarea';
+  rows?: number;
+  debounceMs?: number;
+}
+
+const DebouncedInput: React.FC<DebouncedInputProps> = ({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  className = '',
+  type = 'text',
+  rows = 1,
+  debounceMs = 5000
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  // Update local value when prop changes
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (newValue: string) => {
+    setLocalValue(newValue);
+    
+    // Clear existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Set new timeout for debounced update (fallback)
+    timeoutRef.current = setTimeout(() => {
+      onChange(newValue);
+    }, debounceMs);
+  };
+
+  const handleBlur = () => {
+    // Clear the debounced timeout since we're saving immediately
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Save immediately on blur
+    if (onBlur) {
+      onBlur(localValue);
+    } else {
+      onChange(localValue);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  if (type === 'textarea') {
+    return (
+      <textarea
+        value={localValue}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={className}
+        rows={rows}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={localValue}
+      onChange={(e) => handleChange(e.target.value)}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+};
+
 type SectionType = 'discussion' | 'presentation' | 'brainstorm' | 'review' | 'decision' | 'action_planning';
 
 const getSectionTypeInfo = (type: SectionType) => {
@@ -152,11 +244,12 @@ const SortableAgendaSection: React.FC<SortableAgendaSectionProps> = React.memo((
             {isReadOnly ? (
               <h5 className="font-medium text-gray-900">{section.section}</h5>
             ) : (
-              <input
-                type="text"
+              <DebouncedInput
                 value={section.section}
-                onChange={(e) => onSectionUpdate(index, { section: e.target.value })}
+                onChange={(value) => onSectionUpdate(index, { section: value })}
+                onBlur={(value) => onSectionUpdate(index, { section: value })}
                 className="font-medium text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+                debounceMs={5000}
               />
             )}
             
@@ -218,12 +311,15 @@ const SortableAgendaSection: React.FC<SortableAgendaSectionProps> = React.memo((
             {isReadOnly ? (
               <p className="text-sm text-gray-700 mt-1">{section.purpose}</p>
             ) : (
-              <textarea
+              <DebouncedInput
                 value={section.purpose}
-                onChange={(e) => onSectionUpdate(index, { purpose: e.target.value })}
+                onChange={(value) => onSectionUpdate(index, { purpose: value })}
+                onBlur={(value) => onSectionUpdate(index, { purpose: value })}
                 className="w-full mt-1 p-2 text-sm border rounded-md resize-none"
+                type="textarea"
                 rows={2}
                 placeholder="Describe the purpose of this section..."
+                debounceMs={5000}
               />
             )}
           </div>
@@ -240,16 +336,23 @@ const SortableAgendaSection: React.FC<SortableAgendaSectionProps> = React.memo((
                       <p className="text-sm text-gray-700 flex-1">{question}</p>
                     ) : (
                       <div className="flex-1 flex gap-2">
-                        <textarea
+                        <DebouncedInput
                           value={question}
-                          onChange={(e) => {
+                          onChange={(value) => {
                             const newQuestions = [...section.questions!];
-                            newQuestions[qIndex] = e.target.value;
+                            newQuestions[qIndex] = value;
+                            onSectionUpdate(index, { questions: newQuestions });
+                          }}
+                          onBlur={(value) => {
+                            const newQuestions = [...section.questions!];
+                            newQuestions[qIndex] = value;
                             onSectionUpdate(index, { questions: newQuestions });
                           }}
                           className="flex-1 p-2 text-sm border rounded-md resize-none"
+                          type="textarea"
                           rows={1}
                           placeholder="Enter question..."
+                          debounceMs={5000}
                         />
                         <button
                           onClick={() => {
@@ -292,16 +395,21 @@ const SortableAgendaSection: React.FC<SortableAgendaSectionProps> = React.memo((
                       <p className="text-sm text-gray-700 flex-1">{point}</p>
                     ) : (
                       <div className="flex-1 flex gap-2">
-                        <input
-                          type="text"
+                        <DebouncedInput
                           value={point}
-                          onChange={(e) => {
+                          onChange={(value) => {
                             const newPoints = [...section.talking_points!];
-                            newPoints[pIndex] = e.target.value;
+                            newPoints[pIndex] = value;
+                            onSectionUpdate(index, { talking_points: newPoints });
+                          }}
+                          onBlur={(value) => {
+                            const newPoints = [...section.talking_points!];
+                            newPoints[pIndex] = value;
                             onSectionUpdate(index, { talking_points: newPoints });
                           }}
                           className="flex-1 p-2 text-sm border rounded-md"
                           placeholder="Enter talking point..."
+                          debounceMs={5000}
                         />
                         <button
                           onClick={() => {
@@ -332,16 +440,21 @@ const SortableAgendaSection: React.FC<SortableAgendaSectionProps> = React.memo((
                       <p className="text-sm text-gray-700 flex-1">{item}</p>
                     ) : (
                       <div className="flex-1 flex gap-2">
-                        <input
-                          type="text"
+                        <DebouncedInput
                           value={item}
-                          onChange={(e) => {
+                          onChange={(value) => {
                             const newChecklist = [...section.checklist!];
-                            newChecklist[cIndex] = e.target.value;
+                            newChecklist[cIndex] = value;
+                            onSectionUpdate(index, { checklist: newChecklist });
+                          }}
+                          onBlur={(value) => {
+                            const newChecklist = [...section.checklist!];
+                            newChecklist[cIndex] = value;
                             onSectionUpdate(index, { checklist: newChecklist });
                           }}
                           className="flex-1 p-2 text-sm border rounded-md"
                           placeholder="Enter checklist item..."
+                          debounceMs={5000}
                         />
                         <button
                           onClick={() => {
@@ -379,12 +492,15 @@ const SortableAgendaSection: React.FC<SortableAgendaSectionProps> = React.memo((
               {isReadOnly ? (
                 <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{section.notes}</p>
               ) : (
-                <textarea
+                <DebouncedInput
                   value={section.notes}
-                  onChange={(e) => onSectionUpdate(index, { notes: e.target.value })}
+                  onChange={(value) => onSectionUpdate(index, { notes: value })}
+                  onBlur={(value) => onSectionUpdate(index, { notes: value })}
                   className="w-full mt-1 p-2 text-sm border rounded-md resize-none"
+                  type="textarea"
                   rows={3}
                   placeholder="Add notes for this section..."
+                  debounceMs={5000}
                 />
               )}
             </div>
@@ -466,6 +582,18 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const [showValidation, setShowValidation] = useState(false);
   const [debouncedTemplateData, setDebouncedTemplateData] = useState(templateData);
   const validationTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  // Use refs to maintain stable references for callbacks
+  const templateDataRef = useRef<TemplateData>(templateData);
+  const onTemplateChangeRef = useRef<(newTemplate: TemplateData) => void>(onTemplateChange);
+  const isReadOnlyRef = useRef<boolean>(isReadOnly);
+
+  // Update refs when props change
+  useEffect(() => {
+    templateDataRef.current = templateData;
+    onTemplateChangeRef.current = onTemplateChange;
+    isReadOnlyRef.current = isReadOnly;
+  }, [templateData, onTemplateChange, isReadOnly]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -504,7 +632,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
     const { active, over } = event;
 
     if (active.id !== over?.id) {
-      const currentSections = (templateData.agenda_sections || []).map((section, index) => ({
+      const currentSections = (templateDataRef.current.agenda_sections || []).map((section, index) => ({
         ...section,
         id: section.id || `section-${index}`
       }));
@@ -513,28 +641,28 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       const newIndex = currentSections.findIndex((section) => section.id === over?.id);
 
       const newSections = arrayMove(currentSections, oldIndex, newIndex);
-      onTemplateChange({
-        ...templateData,
+      onTemplateChangeRef.current({
+        ...templateDataRef.current,
         agenda_sections: newSections
       });
     }
-  }, [templateData, onTemplateChange]);
+  }, []); // No dependencies needed since we use refs
 
   const handleSectionUpdate = useCallback((index: number, updates: Partial<AgendaSection>) => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
-    const currentSections = templateData.agenda_sections || [];
+    const currentSections = templateDataRef.current.agenda_sections || [];
     const newSections = [...currentSections];
     newSections[index] = { ...newSections[index], ...updates };
     
-    onTemplateChange({
-      ...templateData,
+    onTemplateChangeRef.current({
+      ...templateDataRef.current,
       agenda_sections: newSections
     });
-  }, [templateData, onTemplateChange, isReadOnly]);
+  }, []); // No dependencies needed since we use refs
 
   const handleAddSection = useCallback(() => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
     const newSection: AgendaSection = {
       id: `section-${Date.now()}`,
@@ -545,53 +673,53 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       questions: []
     };
     
-    const currentSections = templateData.agenda_sections || [];
+    const currentSections = templateDataRef.current.agenda_sections || [];
     const newSections = [...currentSections, newSection];
-    onTemplateChange({
-      ...templateData,
+    onTemplateChangeRef.current({
+      ...templateDataRef.current,
       agenda_sections: newSections
     });
-  }, [templateData, onTemplateChange, isReadOnly]);
+  }, []); // No dependencies needed since we use refs
 
   const handleRemoveSection = useCallback((index: number) => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
-    const currentSections = templateData.agenda_sections || [];
+    const currentSections = templateDataRef.current.agenda_sections || [];
     const newSections = currentSections.filter((_, i) => i !== index);
-    onTemplateChange({
-      ...templateData,
+    onTemplateChangeRef.current({
+      ...templateDataRef.current,
       agenda_sections: newSections
     });
-  }, [templateData, onTemplateChange, isReadOnly]);
+  }, []); // No dependencies needed since we use refs
 
   const handleKeyMessagesUpdate = useCallback((newMessages: string[]) => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
-    onTemplateChange({
-      ...templateData,
+    onTemplateChangeRef.current({
+      ...templateDataRef.current,
       key_messages: newMessages
     });
-  }, [templateData, onTemplateChange, isReadOnly]);
+  }, []); // No dependencies needed since we use refs
 
   const addKeyMessage = () => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
-    const newMessages = [...(templateData.key_messages || []), ''];
+    const newMessages = [...(templateDataRef.current.key_messages || []), ''];
     handleKeyMessagesUpdate(newMessages);
   };
 
   const updateKeyMessage = (index: number, value: string) => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
-    const newMessages = [...(templateData.key_messages || [])];
+    const newMessages = [...(templateDataRef.current.key_messages || [])];
     newMessages[index] = value;
     handleKeyMessagesUpdate(newMessages);
   };
 
   const removeKeyMessage = (index: number) => {
-    if (isReadOnly) return;
+    if (isReadOnlyRef.current) return;
     
-    const newMessages = templateData.key_messages?.filter((_, i) => i !== index) || [];
+    const newMessages = templateDataRef.current.key_messages?.filter((_, i) => i !== index) || [];
     handleKeyMessagesUpdate(newMessages);
   };
 
@@ -699,12 +827,15 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
                     {message}
                   </p>
                 ) : (
-                  <textarea
+                  <DebouncedInput
                     value={message}
-                    onChange={(e) => updateKeyMessage(index, e.target.value)}
+                    onChange={(value) => updateKeyMessage(index, value)}
+                    onBlur={(value) => updateKeyMessage(index, value)}
                     className="w-full p-2 text-sm border rounded-md resize-none"
+                    type="textarea"
                     rows={2}
                     placeholder="Enter key message..."
+                    debounceMs={5000}
                   />
                 )}
               </div>

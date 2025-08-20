@@ -187,10 +187,10 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
       clearTimeout(saveTimeoutRef.current);
     }
     
-    // Set new timeout for 1 second delay
+    // Set new timeout for 7 second delay (fallback)
     saveTimeoutRef.current = setTimeout(() => {
       handleMeetingUpdate({ template_data: newTemplate });
-    }, 1000);
+    }, 7000);
   }, [meetingId]);
 
   // Cleanup timeout on unmount
