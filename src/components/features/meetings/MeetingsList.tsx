@@ -3,17 +3,22 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import MeetingDetailModal from './MeetingDetailModal/MeetingDetailModal';
+import MeetingsFilters from './MeetingsFilters';
+import { useMeetingsFilters } from './hooks/useMeetingsFilters';
+import type { MeetingWithRelations } from './types';
 
 
 const MeetingsList: React.FC = () => {
   const navigate = useNavigate();
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<MeetingWithRelations[]>([]);
   const [meetingTypes, setMeetingTypes] = useState<any[]>([]);
-  const [attendees, setAttendees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Use the meetings filters hook
+  const { filters, filteredMeetings, updateFilters } = useMeetingsFilters(meetings);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -21,8 +26,7 @@ const MeetingsList: React.FC = () => {
       try {
         await Promise.all([
           fetchMeetings(),
-          fetchMeetingTypes(),
-          fetchAttendees()
+          fetchMeetingTypes()
         ]);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -39,11 +43,33 @@ const MeetingsList: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('meetings')
-        .select('*')
+        .select(`
+          *,
+          meeting_types (
+            type_name
+          ),
+          meeting_attendees!inner (
+            people (
+              first_name,
+              last_name
+            )
+          )
+        `)
         .order('scheduled_date', { ascending: false });
 
       if (error) throw error;
-      setMeetings(data || []);
+      
+      // Transform the data to match our MeetingWithRelations interface
+      const transformedMeetings = (data || []).map(meeting => ({
+        ...meeting,
+        meeting_type: meeting.meeting_types,
+        attendees: meeting.meeting_attendees?.map((attendee: any) => ({
+          name: `${attendee.people?.first_name || ''} ${attendee.people?.last_name || ''}`.trim(),
+          role: attendee.role_in_meeting || 'unknown'
+        })) || []
+      }));
+      
+      setMeetings(transformedMeetings);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch meetings');
     }
@@ -62,72 +88,8 @@ const MeetingsList: React.FC = () => {
     }
   };
 
-  const fetchAttendees = async () => {
-    try {
-      // First try the full query with joins
-      const { data, error } = await supabase
-        .from('meeting_attendees')
-        .select(`
-          meeting_id,
-          person_id,
-          role_in_meeting,
-          people (
-            first_name,
-            last_name,
-            email
-          )
-        `);
-
-      if (error) {
-        // If the complex query fails, try a simpler one
-        console.warn('Complex attendee query failed, trying simple query:', error.message);
-        
-        const { data: simpleData, error: simpleError } = await supabase
-          .from('meeting_attendees')
-          .select('meeting_id, person_id, role_in_meeting');
-
-        if (simpleError) {
-          console.warn('Could not fetch attendees:', simpleError.message);
-          setAttendees([]);
-          return;
-        }
-        
-        setAttendees(simpleData || []);
-        return;
-      }
-      
-      setAttendees(data || []);
-    } catch (err) {
-      console.warn('Failed to fetch attendees:', err);
-      setAttendees([]);
-    }
-  };
-
-  const getMeetingTypeName = (meetingTypeId: number) => {
-    const meetingType = meetingTypes.find(type => type.meeting_type_id === meetingTypeId);
-    return meetingType ? meetingType.type_name : 'Unknown';
-  };
-
-  const getMeetingAttendees = (meetingId: number) => {
-    const meetingAttendees = attendees.filter(attendee => attendee.meeting_id === meetingId);
-    return meetingAttendees.map(attendee => {
-      // Handle both full and simplified attendee structures
-      if (attendee.people) {
-        // Full structure with people join
-        return {
-          name: `${attendee.people.first_name || 'Unknown'} ${attendee.people.last_name || ''}`,
-          role: attendee.role_in_meeting || 'unknown',
-          email: attendee.people.email || 'No email'
-        };
-      } else {
-        // Simplified structure without people join
-        return {
-          name: `Person ${attendee.person_id}`,
-          role: attendee.role_in_meeting || 'unknown',
-          email: 'No email'
-        };
-      }
-    });
+  const getMeetingTypeName = (meeting: MeetingWithRelations) => {
+    return meeting.meeting_type?.type_name || 'Unknown';
   };
 
   const handleViewDetails = (meetingId: number) => {
@@ -204,19 +166,30 @@ const MeetingsList: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">
-          Scheduled Meetings ({meetings.length})
-        </h3>
-      </div>
-      
-      {meetings.length === 0 ? (
-        <div className="p-6 text-center text-gray-500">
-          No meetings scheduled yet. Create your first meeting to get started!
+    <div className="space-y-6">
+      {/* Filters */}
+      <MeetingsFilters
+        filters={filters}
+        meetingTypes={meetingTypes}
+        onFiltersChange={updateFilters}
+      />
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">
+            Scheduled Meetings ({filteredMeetings.length} of {meetings.length})
+          </h3>
         </div>
-      ) : (
-        <div className="overflow-x-auto">
+        
+                {filteredMeetings.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">
+            {meetings.length === 0 
+              ? "No meetings scheduled yet. Create your first meeting to get started!"
+              : "No meetings match your current filters. Try adjusting your search criteria."
+            }
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -247,7 +220,7 @@ const MeetingsList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {meetings.map((meeting) => (
+              {filteredMeetings.map((meeting) => (
                 <tr key={meeting.meeting_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
@@ -259,7 +232,7 @@ const MeetingsList: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {getMeetingTypeName(meeting.meeting_type_id)}
+                      {getMeetingTypeName(meeting)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -287,7 +260,7 @@ const MeetingsList: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {(() => {
-                      const meetingAttendees = getMeetingAttendees(meeting.meeting_id);
+                      const meetingAttendees = meeting.attendees || [];
                       if (meetingAttendees.length === 0) {
                         return <span className="text-gray-400 italic">No attendees</span>;
                       }
@@ -322,8 +295,9 @@ const MeetingsList: React.FC = () => {
            onMeetingUpdated={handleMeetingUpdated}
          />
        )}
-     </div>
-   );
- };
+      </div>
+    </div>
+  );
+};
 
 export default MeetingsList;

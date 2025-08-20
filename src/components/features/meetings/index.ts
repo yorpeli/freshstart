@@ -1,5 +1,7 @@
 export { default as MeetingsContainer } from './MeetingsContainer';
 export { default as MeetingsList } from './MeetingsList';
+export { default as MeetingsFilters } from './MeetingsFilters';
+export { useMeetingsFilters } from './hooks/useMeetingsFilters';
 export { default as CreateMeetingModal } from './CreateMeetingModal/CreateMeetingModal';
 export { default as MeetingTypeSelector } from './CreateMeetingModal/MeetingTypeSelector';
 export { default as AttendeeSelector } from './CreateMeetingModal/AttendeeSelector';

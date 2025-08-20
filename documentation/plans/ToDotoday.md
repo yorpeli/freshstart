@@ -5,6 +5,6 @@
     [] Add edit
 
 [] Meetings 
-    [] Single meeting view
-    [] search and filters on the meeting list page
-    [] Meeting documentation and magement
+    [x] Single meeting view
+    [x] search and filters on the meeting list page
+    [x] Meeting documentation and magement
