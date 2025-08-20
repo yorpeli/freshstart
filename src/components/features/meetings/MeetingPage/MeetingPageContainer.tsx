@@ -5,6 +5,7 @@ import MeetingHeader from './MeetingHeader';
 import MeetingStatusCard from './MeetingStatusCard';
 import { useMeetingPermissions } from './useMeetingPermissions';
 import { TemplateEditorWithPreview } from '../TemplateEditor';
+import NotesManager from './NotesManager';
 
 interface DetailedMeeting {
   meeting_id: number;
@@ -153,7 +154,7 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, isLoading, error } = useMeetingDetail(meetingId);
   
@@ -413,52 +414,12 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
         )}
 
         {activeTab === 'notes' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Meeting Notes</h3>
-              {(permissions.canTakeNotes || permissions.canEditNotes) && (
-                <div className="flex items-center gap-2">
-                  {permissions.canTakeNotes && (
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                      Live notes
-                    </span>
-                  )}
-                  <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline">
-                    {permissions.canTakeNotes ? 'Take Notes' : 'Edit Notes'}
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            <div className="text-gray-600">
-              <p>Notes management interface will be implemented in Phase 3.</p>
-              
-              {!permissions.canTakeNotes && !permissions.canEditNotes && (
-                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                  <p className="text-sm text-gray-700">
-                    📝 <strong>Read-only:</strong> Notes cannot be modified for {meeting.status.replace('_', ' ')} meetings.
-                  </p>
-                </div>
-              )}
-              
-              {permissions.canTakeNotes && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-sm text-green-800">
-                    🟢 <strong>Live Meeting:</strong> You can take notes in real-time during this meeting.
-                  </p>
-                </div>
-              )}
-              
-              {meeting.structured_notes && (
-                <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Current Structured Notes</h4>
-                  <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto">
-                    {JSON.stringify(meeting.structured_notes, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
+          <NotesManager
+            meeting={meeting}
+            onNotesUpdate={handleMeetingUpdate}
+            canTakeNotes={permissions.canTakeNotes}
+            canEditNotes={permissions.canEditNotes}
+          />
         )}
 
         {activeTab === 'attendees' && (
