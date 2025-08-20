@@ -6,8 +6,15 @@
       "WebSearch",
       "WebSearch",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "Bash(mkdir:*)"
     ],
     "defaultMode": "acceptEdits"
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

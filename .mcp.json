@@ -1,0 +1,16 @@
+{
+    "mcpServers": {
+       "supabase": {
+                "command": "npx",
+                "args": [
+                  "-y",
+                  "@supabase/mcp-server-supabase@latest",
+                  "--access-token",
+                  "sbp_eb11106a0cd04939713dd6bb0e2f929d75ad3445"
+                ]
+              },
+      "context7": {
+        "url": "https://mcp.context7.com/mcp"
+      }
+  }
+   }

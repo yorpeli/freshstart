@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import MeetingHeader from './MeetingHeader';
 import MeetingStatusCard from './MeetingStatusCard';
 import { useMeetingPermissions } from './useMeetingPermissions';
+import { TemplateEditorWithPreview } from '../TemplateEditor';
 
 interface DetailedMeeting {
   meeting_id: number;
@@ -152,6 +153,7 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
   const { data, isLoading, error } = useMeetingDetail(meetingId);
   
@@ -175,6 +177,30 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
       throw err;
     }
   };
+
+  // Debounced save function for template changes
+  const handleTemplateChange = useCallback((newTemplate: any) => {
+    setHasUnsavedChanges(true);
+    
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Set new timeout for 1 second delay
+    saveTimeoutRef.current = setTimeout(() => {
+      handleMeetingUpdate({ template_data: newTemplate });
+    }, 1000);
+  }, [meetingId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -355,7 +381,15 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
         {activeTab === 'agenda' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Meeting Agenda</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-medium text-gray-900">Meeting Agenda</h3>
+                {hasUnsavedChanges && (
+                  <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-orange-600 rounded-full animate-pulse"></div>
+                    Saving...
+                  </span>
+                )}
+              </div>
               {permissions.canEditTemplate && (
                 <div className="flex items-center gap-2">
                   {!permissions.canEditTemplateStructure && (
@@ -370,26 +404,11 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
               )}
             </div>
             
-            <div className="text-gray-600">
-              <p>Agenda editing interface will be implemented in Phase 2.</p>
-              
-              {!permissions.canEditTemplate && (
-                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                  <p className="text-sm text-gray-700">
-                    📋 <strong>Read-only:</strong> Agenda cannot be modified while the meeting is {meeting.status.replace('_', ' ')}.
-                  </p>
-                </div>
-              )}
-              
-              {meeting.template_data && (
-                <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Current Template</h4>
-                  <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto">
-                    {JSON.stringify(meeting.template_data, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
+            <TemplateEditorWithPreview
+              templateData={meeting.template_data || {}}
+              onTemplateChange={handleTemplateChange}
+              isReadOnly={!permissions.canEditTemplate}
+            />
           </div>
         )}
 
