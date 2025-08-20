@@ -8,6 +8,7 @@ import PhasesView from './components/views/PhasesViewNew';
 import SinglePhaseView from './components/views/SinglePhaseView';
 import TasksView from './components/views/TasksView';
 import MeetingsView from './components/views/MeetingsView';
+import MeetingDetailView from './components/views/MeetingDetailView';
 import WorkstreamsView from './components/views/WorkstreamsView';
 import PeopleView from './components/views/PeopleView';
 import DepartmentsView from './components/views/DepartmentsView';
@@ -46,6 +47,7 @@ function App() {
                 <MeetingsView />
               </ErrorBoundary>
             } />
+            <Route path="/meetings/:id" element={<MeetingDetailView />} />
             <Route path="/workstreams" element={
               <ErrorBoundary>
                 <WorkstreamsView />

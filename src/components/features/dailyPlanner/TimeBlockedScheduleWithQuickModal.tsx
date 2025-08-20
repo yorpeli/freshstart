@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import TimeBlockedSchedule from './TimeBlockedSchedule';
 import { QuickMeetingModal, useQuickMeetingModal } from '../meetings/QuickMeetingModal';
 import type { Meeting } from '../../../hooks/useMeetings';
@@ -16,6 +17,7 @@ const TimeBlockedScheduleWithQuickModal: React.FC<TimeBlockedScheduleWithQuickMo
   viewMode,
   viewRange
 }) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Database update functions
@@ -75,9 +77,8 @@ const TimeBlockedScheduleWithQuickModal: React.FC<TimeBlockedScheduleWithQuickMo
     },
     // onViewFullDetails callback
     (meetingId) => {
-      console.log('View full details for meeting:', meetingId);
-      // TODO: Implement navigation to full meeting details
-      // navigate(`/meetings/${meetingId}`);
+      console.log('Navigating to meeting details:', meetingId);
+      navigate(`/meetings/${meetingId}`);
     }
   );
 

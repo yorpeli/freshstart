@@ -1,27 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, MapPin, Eye } from 'lucide-react';
+import { Calendar, Clock, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import MeetingDetailModal from './MeetingDetailModal/MeetingDetailModal';
 
-interface Meeting {
-  meeting_id: number;
-  meeting_name: string;
-  scheduled_date: string;
-  duration_minutes: number;
-  location_platform: string;
-  status: string;
-  meeting_type_id: number;
-  phase_id: number;
-  initiative_id: number;
-  template_data: any;
-}
-
-interface MeetingType {
-  meeting_type_id: number;
-  type_name: string;
-}
 
 const MeetingsList: React.FC = () => {
+  const navigate = useNavigate();
   const [meetings, setMeetings] = useState<any[]>([]);
   const [meetingTypes, setMeetingTypes] = useState<any[]>([]);
   const [attendees, setAttendees] = useState<any[]>([]);
@@ -265,9 +250,12 @@ const MeetingsList: React.FC = () => {
               {meetings.map((meeting) => (
                 <tr key={meeting.meeting_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                    <button
+                      onClick={() => navigate(`/meetings/${meeting.meeting_id}`)}
+                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors text-left"
+                    >
                       {meeting.meeting_name}
-                    </div>
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
