@@ -7,7 +7,8 @@ const initialFilters: TasksFiltersState = {
   taskTypeFilter: 'all',
   groupBy: 'phase',
   sortBy: 'due_date',
-  sortOrder: 'asc'
+  sortOrder: 'asc',
+  showCompleted: false
 };
 
 export const useTaskFilters = (tasks: TaskWithRelations[]) => {
@@ -45,8 +46,9 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
       
       const matchesStatus = filters.statusFilter === 'all' || task.status === filters.statusFilter;
       const matchesType = filters.taskTypeFilter === 'all' || task.task_type?.type_name === filters.taskTypeFilter;
+      const matchesCompleted = filters.showCompleted || filters.statusFilter === 'completed' || task.status !== 'completed';
       
-      return matchesSearch && matchesStatus && matchesType;
+      return matchesSearch && matchesStatus && matchesType && matchesCompleted;
     });
 
     // Then sort
