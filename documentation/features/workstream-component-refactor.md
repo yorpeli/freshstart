@@ -27,13 +27,16 @@ src/components/features/workstreams/
 │   ├── WorkstreamCard.tsx            # Individual workstream display
 │   ├── WorkstreamGrid.tsx            # Grid layout component
 │   ├── WorkstreamCategories.tsx      # Categories info section
-│   ├── WorkstreamInvestmentChart.tsx # Investment tracking chart
+│   ├── CombinedInvestmentChart.tsx   # Combined investment tracking chart
+│   ├── WorkstreamDistributionPieCharts.tsx # Percentage distribution pie charts
 │   ├── WorkstreamsSkeleton.tsx       # Loading state
 │   ├── WorkstreamsError.tsx          # Error state
 │   └── WorkstreamsEmpty.tsx          # Empty state
 ├── hooks/                            # Custom hooks
 │   ├── useWorkstreamPriority.ts      # Priority logic hook
-│   └── useWorkstreamInvestment.ts    # Investment data hook
+│   ├── useWorkstreamInvestment.ts    # Meeting investment data hook
+│   ├── useTaskInvestment.ts          # Task investment data hook
+│   └── useWorkstreamDistribution.ts  # Distribution percentage calculations
 ├── types.ts                          # TypeScript definitions
 └── index.ts                          # Barrel exports
 ```
@@ -47,11 +50,14 @@ src/components/features/workstreams/
 #### 2. Compound Components
 - **WorkstreamGrid** - Manages layout and renders WorkstreamCard components
 - **WorkstreamCard** - Self-contained workstream display with priority handling
-- **WorkstreamInvestmentChart** - Interactive chart with multiple view modes
+- **CombinedInvestmentChart** - Interactive chart with multiple view modes and data types
+- **WorkstreamDistributionPieCharts** - Percentage distribution pie charts for meetings, tasks, and combined data
 
 #### 3. Custom Hooks
 - **useWorkstreamPriority** - Encapsulates priority display logic and icon selection
-- **useWorkstreamInvestment** - Manages workstream investment data aggregation and processing
+- **useWorkstreamInvestment** - Manages meeting investment data aggregation and processing
+- **useTaskInvestment** - Manages task investment data aggregation and processing
+- **useWorkstreamDistribution** - Calculates percentage distributions across workstreams
 
 #### 4. UI State Management
 All four essential UI states properly handled:
@@ -138,7 +144,8 @@ const WorkstreamsView: React.FC = () => {
       </div>
       
       <div className="space-y-8">
-        <WorkstreamInvestmentChart />    {/* New investment tracking */}
+        <CombinedInvestmentChart />    {/* Comprehensive investment tracking */}
+        <WorkstreamDistributionPieCharts />    {/* Percentage distribution charts */}
         <WorkstreamsContainer />
         <WorkstreamCategories />
       </div>
@@ -147,28 +154,31 @@ const WorkstreamsView: React.FC = () => {
 };
 ```
 
-## New Features: Workstream Investment Chart
+## New Features: Combined Investment Chart
 
 ### Overview
-The `WorkstreamInvestmentChart` component provides real-time visibility into team investment across different workstreams over time. It addresses the need to understand where the team is spending their time and how investment patterns change over weeks.
+The `CombinedInvestmentChart` component provides real-time visibility into team investment across different workstreams over time, combining both meeting and task data. It addresses the need to understand where the team is spending their time and how investment patterns change over weeks.
 
 ### Key Features
 
-#### 1. Dual Chart Views
-- **Stacked Bar Chart**: Shows total meetings per week with workstreams stacked on top of each other
-- **Line Chart**: Displays trends over time for individual workstreams
-- **Toggle Interface**: Easy switching between chart types via header buttons
+#### 1. Triple Data Views
+- **Meetings Only**: Shows only meeting investment data by workstream
+- **Tasks Only**: Shows only task investment data by workstream  
+- **Combined**: Shows total investment (meetings + tasks) by workstream
+- **Chart Types**: Both stacked bar and line chart options for each data view
 
 #### 2. Data Aggregation
 - **Weekly Grouping**: Automatically groups data by weeks starting from Monday
-- **Multiple Workstream Support**: Correctly handles meetings with multiple workstreams (counts each instance)
+- **Multiple Sources**: Combines meeting data (by scheduled_date) and task data (by due_date)
+- **Multiple Workstream Support**: Correctly handles meetings/tasks with multiple workstreams (counts each instance)
 - **Real-time Data**: Pulls data directly from Supabase database
-- **Date Range**: Automatically spans from earliest to latest meeting dates
+- **Comprehensive Range**: Spans all available meeting and task dates
 
 #### 3. Visual Design
 - **Color Consistency**: Uses exact workstream colors from database
 - **Interactive Elements**: Hover effects, tooltips, and smooth transitions
 - **Responsive Layout**: Horizontal scrolling for many weeks of data
+- **Optimized Scaling**: Line chart uses individual workstream max values + 10% buffer for better visual clarity
 - **Professional Styling**: Clean, modern UI consistent with app design system
 
 #### 4. User Experience
@@ -181,21 +191,31 @@ The `WorkstreamInvestmentChart` component provides real-time visibility into tea
 
 #### Data Processing
 ```typescript
-// Hook processes complex data relationships
-const { data: investmentData, isLoading, error } = useWorkstreamInvestment();
+// Hooks process complex data relationships from multiple sources
+const { data: meetingData, isLoading: meetingsLoading, error: meetingsError } = useWorkstreamInvestment();
+const { data: taskData, isLoading: tasksLoading, error: tasksError } = useTaskInvestment();
 
-// Aggregates meetings → workstreams → weekly counts
-// Handles multiple workstreams per meeting correctly
-// Provides sorted, normalized data for chart rendering
+// Combines meeting and task data intelligently
+// Aggregates meetings (by scheduled_date) and tasks (by due_date) → workstreams → weekly counts
+// Handles multiple workstreams per meeting/task correctly
+// Provides sorted, normalized data for chart rendering with flexible data type selection
 ```
 
 #### Chart Rendering
 ```typescript
-// Stacked bars with proper positioning calculations
+// Stacked bars with proper positioning calculations (uses total stacked values)
 const height = (count / maxValue) * 100;
 const position = (previousWorkstreamsHeight / maxValue) * 100;
 
-// Line chart with SVG path generation
+// Line chart with optimized scaling for individual workstream values
+const lineChartMaxValue = Math.max(
+  ...combinedData.flatMap(week => 
+    allWorkstreamNames.map(workstream => week.workstreams[workstream] || 0)
+  )
+);
+const adjustedMaxValue = lineChartMaxValue * 1.1; // Add 10% buffer
+
+// SVG path generation with proper Y-axis scaling
 const pathData = points.map((point, index) => 
   `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
 ).join(' ');
@@ -203,11 +223,85 @@ const pathData = points.map((point, index) =>
 
 #### State Management
 ```typescript
-// Local state for chart type switching
+// Local state for chart type and data type switching
 const [chartType, setChartType] = useState<ChartType>('stacked');
+const [dataType, setDataType] = useState<DataType>('combined');
 
 // Conditional rendering based on selected view
 {chartType === 'stacked' ? renderStackedChart() : renderLineChart()}
+
+// Data combination based on selected data type
+const getCombinedData = () => {
+  // Intelligently combines meeting and task data based on dataType selection
+};
+```
+
+## New Features: Workstream Distribution Pie Charts
+
+### Overview
+The `WorkstreamDistributionPieCharts` component provides visual percentage breakdowns of workstream investment through interactive pie charts. It complements the time-series analysis with proportional distribution insights, showing how resources are allocated across different workstreams.
+
+### Key Features
+
+#### 1. Triple Pie Chart Layout
+- **Meetings Distribution**: Shows percentage breakdown of meetings across workstreams
+- **Tasks Distribution**: Shows percentage breakdown of tasks across workstreams
+- **Combined Distribution**: Shows overall investment distribution combining meetings and tasks
+- **Side-by-Side Comparison**: Easy visual comparison between different data types
+
+#### 2. Interactive Pie Charts
+- **SVG-Based Rendering**: Smooth, scalable pie charts with hover effects
+- **Center Labels**: Total counts displayed in the center of each pie chart
+- **Interactive Segments**: Hover effects with brightness changes for better UX
+- **Custom Tooltips**: Detailed information on hover showing exact counts and percentages
+
+#### 3. Comprehensive Legends
+- **Color-Coded Legend**: Each workstream segment has a matching legend item
+- **Percentage Display**: Shows both count and percentage for each workstream
+- **Sorted by Size**: Workstreams ordered by investment size for easy reading
+
+#### 4. Summary Analytics
+- **Percentage Breakdown**: Clear display of each workstream's percentage of total investment
+- **Total Counts**: Individual totals for meetings, tasks, and combined metrics
+- **Ratio Analysis**: Tasks-per-meeting ratio for operational insights
+
+### Technical Implementation
+
+#### Data Processing
+```typescript
+// Hook processes and aggregates distribution data
+const { data, isLoading, error } = useWorkstreamDistribution();
+
+// Calculates percentage distributions from raw counts
+const percentage = totalCount > 0 ? (count / totalCount) * 100 : 0;
+
+// Provides sorted, normalized data for pie chart rendering
+const sortedData = distributionData.sort((a, b) => b.count - a.count);
+```
+
+#### Pie Chart Rendering
+```typescript
+// SVG path calculation for pie segments
+const angle = (item.percentage / 100) * 360;
+const pathData = [
+  `M ${centerX} ${centerY}`,
+  `L ${startX} ${startY}`,
+  `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+  'Z'
+].join(' ');
+
+// Dynamic color application from workstream database colors
+fill={item.color}
+```
+
+#### Data Aggregation Strategy
+```typescript
+// Combines time-series data into distribution totals
+meetingData.forEach(week => {
+  Object.entries(week.workstreams).forEach(([workstream, count]) => {
+    meetingTotals.set(workstream, (meetingTotals.get(workstream) || 0) + count);
+  });
+});
 ```
 
 ## Benefits Achieved
@@ -224,9 +318,10 @@ const [chartType, setChartType] = useState<ChartType>('stacked');
 
 ### 3. Reusability
 - **WorkstreamCard** can be used in different contexts (lists, modals, etc.)
-- **WorkstreamInvestmentChart** can be embedded in dashboards or reports
+- **CombinedInvestmentChart** can be embedded in dashboards or reports
+- **WorkstreamDistributionPieCharts** provide percentage insights for any analysis context
 - **Flexible props** allow customization without modification
-- **Variant support** for different display modes
+- **Variant support** for different display modes and data types
 
 ### 4. Type Safety
 - **Comprehensive TypeScript** interfaces for all components
@@ -246,32 +341,36 @@ const [chartType, setChartType] = useState<ChartType>('stacked');
 
 ### 7. Business Value
 - **Investment Visibility**: Clear view of where team time is spent
-- **Trend Analysis**: Understanding of workstream investment patterns over time
-- **Data-Driven Decisions**: Evidence-based resource allocation insights
-- **Stakeholder Communication**: Visual representation of team efforts
+- **Trend Analysis**: Understanding of workstream investment patterns over time with accurate scaling
+- **Proportional Insights**: Percentage distribution analysis for resource allocation
+- **Data-Driven Decisions**: Evidence-based resource allocation insights with properly scaled visualizations
+- **Stakeholder Communication**: Visual representation of team efforts across multiple chart types with optimal readability
 
 ## File Changes Summary
 
-### New Files Created (12)
+### New Files Created (15)
 1. `WorkstreamsContainer.tsx` - Main data container
 2. `WorkstreamCard.tsx` - Individual workstream component
 3. `WorkstreamGrid.tsx` - Grid layout component  
 4. `WorkstreamCategories.tsx` - Categories display
-5. `WorkstreamInvestmentChart.tsx` - Investment tracking chart
-6. `WorkstreamsSkeleton.tsx` - Loading state
-7. `WorkstreamsError.tsx` - Error state
-8. `WorkstreamsEmpty.tsx` - Empty state
-9. `useWorkstreamPriority.ts` - Priority logic hook
-10. `useWorkstreamInvestment.ts` - Investment data hook
-11. `types.ts` - TypeScript definitions
-12. `index.ts` - Barrel exports
+5. `CombinedInvestmentChart.tsx` - Combined investment tracking chart
+6. `WorkstreamDistributionPieCharts.tsx` - Percentage distribution pie charts
+7. `WorkstreamsSkeleton.tsx` - Loading state
+8. `WorkstreamsError.tsx` - Error state
+9. `WorkstreamsEmpty.tsx` - Empty state
+10. `useWorkstreamPriority.ts` - Priority logic hook
+11. `useWorkstreamInvestment.ts` - Meeting investment data hook
+12. `useTaskInvestment.ts` - Task investment data hook
+13. `useWorkstreamDistribution.ts` - Distribution percentage calculations hook
+14. `types.ts` - TypeScript definitions
+15. `index.ts` - Barrel exports
 
 ### Modified Files (1)
-1. `WorkstreamsView.tsx` - Refactored to layout-only component with investment chart
+1. `WorkstreamsView.tsx` - Refactored to layout-only component with comprehensive analytics charts
 
 ### Lines of Code Impact
 - **Before**: 203 lines (monolithic)
-- **After**: 25 lines (main component) + 450+ lines (distributed across focused components)
+- **After**: 25 lines (main component) + 600+ lines (distributed across focused components)
 - **Net improvement**: Better separation, maintainability, reusability, and new business intelligence features
 
 ## Architecture Compliance
@@ -315,10 +414,13 @@ describe('WorkstreamCard', () => {
   it('applies correct color theming')
 })
 
-describe('WorkstreamInvestmentChart', () => {
+describe('CombinedInvestmentChart', () => {
   it('renders stacked chart by default')
   it('switches to line chart when toggle clicked')
-  it('displays correct data aggregation')
+  it('switches between meetings, tasks, and combined data')
+  it('displays correct data aggregation for all data types')
+  it('uses proper scaling for line chart (individual max + 10% buffer)')
+  it('uses total stacked values for stacked chart scaling')
   it('handles empty data gracefully')
   it('shows proper loading and error states')
 })
@@ -336,6 +438,13 @@ describe('useWorkstreamInvestment', () => {
   it('sorts data chronologically')
   it('provides proper loading and error states')
 })
+
+describe('useTaskInvestment', () => {
+  it('aggregates task data correctly by week using due_date')
+  it('handles multiple workstreams per task')
+  it('sorts data chronologically')
+  it('provides proper loading and error states')
+})
 ```
 
 ## Conclusion
@@ -350,6 +459,6 @@ The refactoring demonstrates how proper component architecture leads to:
 - **Future extensibility** through composable architecture
 - **Business value** through actionable investment insights
 
-The addition of the WorkstreamInvestmentChart elevates the workstreams feature from a simple list view to a comprehensive management and analytics tool, providing stakeholders with clear visibility into team investment patterns and enabling data-driven decision making.
+The addition of the CombinedInvestmentChart elevates the workstreams feature from a simple list view to a comprehensive management and analytics tool, providing stakeholders with clear visibility into team investment patterns across both meetings and tasks, enabling data-driven decision making.
 
 This pattern can now be applied to other views in the application for consistent, maintainable code organization and enhanced business intelligence capabilities.

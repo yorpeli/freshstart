@@ -6,6 +6,7 @@ import Card from '../../../ui/Card';
 const TasksFilters: React.FC<TasksFiltersProps> = ({
   filters,
   taskTypes,
+  workstreams,
   onFiltersChange
 }) => {
   return (
@@ -18,7 +19,7 @@ const TasksFilters: React.FC<TasksFiltersProps> = ({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
               <input
                 type="text"
-                placeholder="Search tasks, descriptions, owners, phases..."
+                placeholder="Search tasks, descriptions, owners, phases, workstreams..."
                 value={filters.searchQuery}
                 onChange={(e) => onFiltersChange({ searchQuery: e.target.value })}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -53,6 +54,20 @@ const TasksFilters: React.FC<TasksFiltersProps> = ({
             ))}
           </select>
 
+          {/* Workstream Filter */}
+          <select
+            value={filters.workstreamFilter}
+            onChange={(e) => onFiltersChange({ workstreamFilter: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="all">All Workstreams</option>
+            {workstreams.map(workstream => (
+              <option key={workstream.workstream_id} value={workstream.workstream_name}>
+                {workstream.workstream_name}
+              </option>
+            ))}
+          </select>
+
           {/* Sort By */}
           <select
             value={`${filters.sortBy}-${filters.sortOrder}`}
@@ -83,6 +98,7 @@ const TasksFilters: React.FC<TasksFiltersProps> = ({
             <option value="phase">Group by Phase</option>
             <option value="type">Group by Type</option>
             <option value="status">Group by Status</option>
+            <option value="workstream">Group by Workstream</option>
             <option value="date">Group by Date</option>
             <option value="none">No Grouping</option>
           </select>

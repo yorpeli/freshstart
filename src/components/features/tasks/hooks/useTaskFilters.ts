@@ -5,6 +5,7 @@ const initialFilters: TasksFiltersState = {
   searchQuery: '',
   statusFilter: 'all',
   taskTypeFilter: 'all',
+  workstreamFilter: 'all',
   groupBy: 'phase',
   sortBy: 'due_date',
   sortOrder: 'asc',
@@ -42,13 +43,16 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
                            (task.owner_name && task.owner_name.toLowerCase().includes(searchLower)) ||
                            (task.phase_name && task.phase_name.toLowerCase().includes(searchLower)) ||
                            (task.initiative_name && task.initiative_name.toLowerCase().includes(searchLower)) ||
-                           (task.task_type?.type_name && task.task_type.type_name.toLowerCase().includes(searchLower));
+                           (task.task_type?.type_name && task.task_type.type_name.toLowerCase().includes(searchLower)) ||
+                           (task.workstreams && task.workstreams.some(ws => ws.workstream_name.toLowerCase().includes(searchLower)));
       
       const matchesStatus = filters.statusFilter === 'all' || task.status === filters.statusFilter;
       const matchesType = filters.taskTypeFilter === 'all' || task.task_type?.type_name === filters.taskTypeFilter;
+      const matchesWorkstream = filters.workstreamFilter === 'all' || 
+                               (task.workstreams && task.workstreams.some(ws => ws.workstream_name === filters.workstreamFilter));
       const matchesCompleted = filters.showCompleted || filters.statusFilter === 'completed' || task.status !== 'completed';
       
-      return matchesSearch && matchesStatus && matchesType && matchesCompleted;
+      return matchesSearch && matchesStatus && matchesType && matchesWorkstream && matchesCompleted;
     });
 
     // Then sort
@@ -110,6 +114,14 @@ export const useTaskFilters = (tasks: TaskWithRelations[]) => {
           break;
         case 'status':
           groupKey = task.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+          break;
+        case 'workstream':
+          if (task.workstreams && task.workstreams.length > 0) {
+            // If task has multiple workstreams, group by the first one
+            groupKey = task.workstreams[0].workstream_name;
+          } else {
+            groupKey = 'No Workstream';
+          }
           break;
         case 'date':
           if (task.due_date) {

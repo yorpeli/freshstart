@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 import type { TaskWithRelations } from '../types';
 import Badge from '../../../ui/Badge';
 
@@ -6,9 +7,10 @@ interface TaskRowProps {
   task: TaskWithRelations;
   level?: number;
   onTaskClick: (task: TaskWithRelations) => void;
+  onDeleteClick?: (task: TaskWithRelations) => void;
 }
 
-const TaskRow: React.FC<TaskRowProps> = ({ task, level = 0, onTaskClick }) => {
+const TaskRow: React.FC<TaskRowProps> = ({ task, level = 0, onTaskClick, onDeleteClick }) => {
   const getStatusColor = (status: string): string => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
@@ -111,11 +113,26 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, level = 0, onTaskClick }) => {
             <span>{task.subtasks.length} subtask{task.subtasks.length > 1 ? 's' : ''}</span>
           )}
         </td>
+
+        <td className="px-6 py-4 whitespace-nowrap text-right">
+          {onDeleteClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick(task);
+              }}
+              className="p-1 hover:bg-red-100 rounded transition-colors text-red-600"
+              title="Delete task"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </td>
       </tr>
       
       {/* Render subtasks */}
       {task.subtasks && task.subtasks.map(subtask => (
-        <TaskRow key={subtask.task_id} task={subtask} level={level + 1} onTaskClick={onTaskClick} />
+        <TaskRow key={subtask.task_id} task={subtask} level={level + 1} onTaskClick={onTaskClick} onDeleteClick={onDeleteClick} />
       ))}
     </>
   );

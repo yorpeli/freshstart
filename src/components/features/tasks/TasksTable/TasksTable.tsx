@@ -11,7 +11,8 @@ const TasksTable: React.FC<TasksTableProps> = ({
   groupBy,
   expandedGroups,
   onToggleGroup,
-  onTaskClick
+  onTaskClick,
+  onDeleteClick
 }) => {
   // Build task hierarchy
   const buildTaskHierarchy = (tasks: TaskWithRelations[]) => {
@@ -50,6 +51,14 @@ const TasksTable: React.FC<TasksTableProps> = ({
             break;
           case 'status':
             groupKey = task.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            break;
+          case 'workstream':
+            if (task.workstreams && task.workstreams.length > 0) {
+              // If task has multiple workstreams, group by the first one
+              groupKey = task.workstreams[0].workstream_name;
+            } else {
+              groupKey = 'No Workstream';
+            }
             break;
           case 'date':
             if (task.due_date) {
@@ -180,7 +189,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
                 <React.Fragment key={groupKey}>
                   {groupBy !== 'none' && (
                     <tr className="bg-gray-100">
-                      <td colSpan={10} className="px-6 py-3">
+                      <td colSpan={11} className="px-6 py-3">
                         <button
                           onClick={() => onToggleGroup(groupKey)}
                           className="flex items-center gap-2 w-full text-left"
@@ -195,7 +204,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
 
                   {/* Always show tasks when no grouping, or when group is expanded */}
                   {(groupBy === 'none' || isExpanded) && hierarchicalTasks.map(task => (
-                    <TaskRow key={task.task_id} task={task} onTaskClick={onTaskClick} />
+                    <TaskRow key={task.task_id} task={task} onTaskClick={onTaskClick} onDeleteClick={onDeleteClick} />
                   ))}
                 </React.Fragment>
               );

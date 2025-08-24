@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, User, Target, FileText, MessageSquare, ArrowUpRight, ArrowDownRight, Edit, Save, XCircle } from 'lucide-react';
+import { X, Calendar, Clock, User, Target, FileText, MessageSquare, ArrowUpRight, ArrowDownRight, Edit, Save, XCircle, Trash2 } from 'lucide-react';
 import Badge from '../../../ui/Badge';
 import type { TaskWithRelations } from '../types';
 import { useTaskTypes } from '../hooks/useTaskTypes';
+import { useWorkstreams } from '../hooks/useWorkstreams';
 import { usePeopleWithRelations, usePhases } from '../../../../hooks/useSupabaseQuery';
 import { supabase } from '../../../../lib/supabase';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,48 +19,86 @@ interface TaskEditForm {
   description: string;
   status: string;
   priority: number | null;
-  start_date: string;
-  due_date: string;
+  start_date: string | null;
+  due_date: string | null;
   owner_id: number;
   task_type_id: number | null;
   phase_id: number;
-  notes: string;
+  notes: string | null;
+  workstream_ids: number[];
 }
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [editForm, setEditForm] = useState<TaskEditForm>(() => ({
     task_name: task.task_name,
     description: task.description || '',
     status: task.status,
     priority: task.priority,
-    start_date: task.start_date || '',
-    due_date: task.due_date || '',
+    start_date: task.start_date,
+    due_date: task.due_date,
     owner_id: task.owner_id,
     task_type_id: task.task_type_id,
     phase_id: task.phase_id,
-    notes: task.notes || ''
+    notes: task.notes,
+    workstream_ids: task.workstreams?.map(w => w.workstream_id) || []
   }));
   
   const queryClient = useQueryClient();
   const { data: taskTypes = [] } = useTaskTypes();
+  const { data: workstreams = [] } = useWorkstreams();
   const { data: people = [] } = usePeopleWithRelations();
   const { data: phases = [] } = usePhases();
   
   const updateTaskMutation = useMutation({
     mutationFn: async (updatedTask: Partial<TaskEditForm>) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update(updatedTask)
-        .eq('task_id', task.task_id)
-        .select()
-        .single();
+      const { workstream_ids, ...taskFields } = updatedTask;
       
-      if (error) {
-        throw new Error(error.message);
+      // Update task fields
+      if (Object.keys(taskFields).length > 0) {
+        const { data, error } = await supabase
+          .from('tasks')
+          .update(taskFields)
+          .eq('task_id', task.task_id)
+          .select()
+          .single();
+        
+        if (error) {
+          throw new Error(error.message);
+        }
       }
       
-      return data;
+      // Update workstreams if they changed
+      if (workstream_ids !== undefined) {
+        // Delete existing workstream associations
+        const { error: deleteError } = await supabase
+          .from('task_workstreams')
+          .delete()
+          .eq('task_id', task.task_id);
+        
+        if (deleteError) {
+          throw new Error(`Error removing workstreams: ${deleteError.message}`);
+        }
+        
+        // Add new workstream associations
+        if (workstream_ids.length > 0) {
+          const workstreamAssociations = workstream_ids.map(workstream_id => ({
+            task_id: task.task_id,
+            workstream_id
+          }));
+          
+          const { error: insertError } = await supabase
+            .from('task_workstreams')
+            .insert(workstreamAssociations);
+          
+          if (insertError) {
+            throw new Error(`Error adding workstreams: ${insertError.message}`);
+          }
+        }
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -70,21 +109,47 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
       alert('Failed to update task. Please try again.');
     }
   });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('task_id', task.task_id);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      alert('Task deleted successfully');
+      onClose();
+    },
+    onError: (error) => {
+      console.error('Error deleting task:', error);
+      alert('Failed to delete task. Please try again.');
+    }
+  });
   
   const handleSave = () => {
-    const updatedFields: Partial<TaskEditForm> = {};
+    const updatedFields: any = {};
     
     // Only include changed fields
     if (editForm.task_name !== task.task_name) updatedFields.task_name = editForm.task_name;
     if (editForm.description !== (task.description || '')) updatedFields.description = editForm.description || null;
     if (editForm.status !== task.status) updatedFields.status = editForm.status;
     if (editForm.priority !== task.priority) updatedFields.priority = editForm.priority;
-    if (editForm.start_date !== (task.start_date || '')) updatedFields.start_date = editForm.start_date || null;
-    if (editForm.due_date !== (task.due_date || '')) updatedFields.due_date = editForm.due_date || null;
+    if (editForm.start_date !== task.start_date) updatedFields.start_date = editForm.start_date;
+    if (editForm.due_date !== task.due_date) updatedFields.due_date = editForm.due_date;
     if (editForm.owner_id !== task.owner_id) updatedFields.owner_id = editForm.owner_id;
     if (editForm.task_type_id !== task.task_type_id) updatedFields.task_type_id = editForm.task_type_id;
     if (editForm.phase_id !== task.phase_id) updatedFields.phase_id = editForm.phase_id;
     if (editForm.notes !== (task.notes || '')) updatedFields.notes = editForm.notes || null;
+    const currentWorkstreamIds = task.workstreams?.map(w => w.workstream_id) || [];
+    if (JSON.stringify(editForm.workstream_ids.sort()) !== JSON.stringify(currentWorkstreamIds.sort())) {
+      updatedFields.workstream_ids = editForm.workstream_ids;
+    }
     
     if (Object.keys(updatedFields).length > 0) {
       updateTaskMutation.mutate(updatedFields);
@@ -98,12 +163,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
     description: task.description || '',
     status: task.status,
     priority: task.priority,
-    start_date: task.start_date || '',
-    due_date: task.due_date || '',
+    start_date: task.start_date,
+    due_date: task.due_date,
     owner_id: task.owner_id,
     task_type_id: task.task_type_id,
     phase_id: task.phase_id,
-    notes: task.notes || ''
+    notes: task.notes,
+    workstream_ids: task.workstreams?.map(w => w.workstream_id) || []
   });
 
   const handleCancel = () => {
@@ -111,12 +177,29 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
     setIsEditing(false);
   };
 
+  const handleDeleteClick = () => {
+    if (task.subtasks && task.subtasks.length > 0) {
+      alert('Cannot delete task that has subtasks. Please delete or reassign subtasks first.');
+      return;
+    }
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteTaskMutation.mutate();
+    setShowDeleteConfirmation(false);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
+  };
+
   // Reset form when task changes
   useEffect(() => {
     const newForm = resetForm();
     setEditForm(newForm);
     setIsEditing(false);
-  }, [task.task_id, task.task_name, task.description, task.status, task.priority, task.start_date, task.due_date, task.owner_id, task.task_type_id, task.phase_id, task.notes]);
+  }, [task.task_id, task.task_name, task.description, task.status, task.priority, task.start_date, task.due_date, task.owner_id, task.task_type_id, task.phase_id, task.notes, task.workstreams]);
   
   if (!isOpen) return null;
 
@@ -205,13 +288,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="p-2 hover:bg-blue-100 rounded-full transition-colors text-blue-600"
-                title="Edit task"
-              >
-                <Edit size={20} />
-              </button>
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 hover:bg-blue-100 rounded-full transition-colors text-blue-600"
+                  title="Edit task"
+                >
+                  <Edit size={20} />
+                </button>
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={deleteTaskMutation.isPending}
+                  className="p-2 hover:bg-red-100 rounded-full transition-colors text-red-600 disabled:opacity-50"
+                  title="Delete task"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </>
             )}
             <button
               onClick={onClose}
@@ -224,8 +317,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Status and Priority */}
-          <div className="flex items-center gap-4">
+          {/* Status, Priority, and Workstreams */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <span className="text-sm font-medium text-gray-500">Status</span>
               <div className="mt-1">
@@ -272,6 +365,54 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
                 )}
               </div>
             </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Workstreams</span>
+              <div className="mt-1">
+                {isEditing ? (
+                  <div className="space-y-1">
+                    {workstreams.map((workstream) => (
+                      <label key={workstream.workstream_id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editForm.workstream_ids.includes(workstream.workstream_id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditForm({
+                                ...editForm,
+                                workstream_ids: [...editForm.workstream_ids, workstream.workstream_id]
+                              });
+                            } else {
+                              setEditForm({
+                                ...editForm,
+                                workstream_ids: editForm.workstream_ids.filter(id => id !== workstream.workstream_id)
+                              });
+                            }
+                          }}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-xs text-gray-700">{workstream.workstream_name}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  task.workstreams && task.workstreams.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {task.workstreams.map((workstream) => (
+                        <Badge 
+                          key={workstream.workstream_id} 
+                          className="text-white text-xs"
+                          style={{ backgroundColor: workstream.color_code || '#6B7280' }}
+                        >
+                          {workstream.workstream_name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-500 text-xs italic">No workstreams</span>
+                  )
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Description */}
@@ -305,8 +446,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
                 {isEditing ? (
                   <input
                     type="date"
-                    value={editForm.start_date}
-                    onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+                    value={editForm.start_date || ''}
+                    onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value || null })}
                     className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
                   />
                 ) : (
@@ -321,8 +462,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
                 {isEditing ? (
                   <input
                     type="date"
-                    value={editForm.due_date}
-                    onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                    value={editForm.due_date || ''}
+                    onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value || null })}
                     className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:border-primary-500 focus:outline-none"
                   />
                 ) : (
@@ -413,6 +554,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
             </div>
           )}
 
+
+
           {/* Task Relationships */}
           {(task.parent_task_id || (task.subtasks && task.subtasks.length > 0)) && (
             <div>
@@ -440,8 +583,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
             <div className="mt-2">
               {isEditing ? (
                 <textarea
-                  value={editForm.notes}
-                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  value={editForm.notes || ''}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value || null })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-primary-500 focus:outline-none resize-vertical"
                   rows={3}
                   placeholder="Task notes"
@@ -467,20 +610,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
             </div>
           )}
 
-          {/* Workstreams */}
-          {task.workstreams && task.workstreams.length > 0 && (
-            <div>
-              <span className="text-sm font-medium text-gray-500">Workstreams</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {task.workstreams.map((workstream) => (
-                  <Badge key={workstream.workstream_id} className="bg-purple-100 text-purple-800">
-                    {workstream.workstream_name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Timestamps */}
           <div className="pt-4 border-t border-gray-200">
             <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
@@ -493,6 +622,35 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirmation && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Task</h3>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete <strong>{task.task_name}</strong>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleCancelDelete}
+                  disabled={deleteTaskMutation.isPending}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteTaskMutation.isPending}
+                  className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {deleteTaskMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

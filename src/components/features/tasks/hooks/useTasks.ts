@@ -29,6 +29,13 @@ export const useTasks = () => {
           initiatives (
             initiative_id,
             initiative_name
+          ),
+          task_workstreams (
+            workstreams (
+              workstream_id,
+              workstream_name,
+              color_code
+            )
           )
         `)
         .order('phase_id', { ascending: true })
@@ -46,7 +53,8 @@ export const useTasks = () => {
         task_type: task.task_types,
         owner_name: `${task.people?.first_name || ''} ${task.people?.last_name || ''}`.trim(),
         phase_name: task.phases?.phase_name || '',
-        initiative_name: task.initiatives?.initiative_name || ''
+        initiative_name: task.initiatives?.initiative_name || '',
+        workstreams: task.task_workstreams?.map(tw => tw.workstreams).filter(Boolean) || []
       }));
 
       return transformedData;

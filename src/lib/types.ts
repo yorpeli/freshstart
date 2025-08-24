@@ -25,7 +25,7 @@ export interface Workstream {
   workstream_name: string;
   description: string | null;
   priority: number | null; // 1=low, 2=medium, 3=high
-  color: string | null;
+  color_code: string | null;
   created_at: string;
   updated_at: string;
 }
