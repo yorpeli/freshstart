@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkstreamsContainer, WorkstreamCategories } from '../features/workstreams';
+import { WorkstreamsContainer, WorkstreamCategories, WorkstreamInvestmentChart } from '../features/workstreams';
 
 const WorkstreamsView: React.FC = () => {
   return (
@@ -16,6 +16,7 @@ const WorkstreamsView: React.FC = () => {
 
       {/* Main Content */}
       <div className="space-y-8">
+        <WorkstreamInvestmentChart />
         <WorkstreamsContainer />
         <WorkstreamCategories />
       </div>

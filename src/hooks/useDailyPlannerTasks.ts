@@ -15,6 +15,7 @@ export interface DailyPlannerTask {
   owner: string;
   taskType: string;
   estimatedMinutes?: number;
+  updatedAt: string;
 }
 
 export const useDailyPlannerTasks = (selectedDate: Date) => {
@@ -67,9 +68,17 @@ export const useDailyPlannerTasks = (selectedDate: Date) => {
           owner: `${task.people?.first_name || ''} ${task.people?.last_name || ''}`.trim(),
           taskType: task.task_types?.type_name || '',
           estimatedMinutes: undefined, // Not currently stored in DB
+          updatedAt: task.updated_at
         }))
         .filter(task => {
-          // Filter tasks that are relevant for the selected date
+          // For completed tasks, show them on the day they were completed
+          if (task.status === 'completed') {
+            if (!task.updatedAt) return false;
+            const completionDate = parseISO(task.updatedAt);
+            return isSameDay(completionDate, selectedDate);
+          }
+          
+          // For non-completed tasks, use the existing logic
           if (!task.dueDate) return false;
           
           const taskDate = parseISO(task.dueDate);

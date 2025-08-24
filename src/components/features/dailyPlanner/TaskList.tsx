@@ -32,27 +32,18 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate }) => {
   const getPriorityColor = (priority: number) => {
     switch (priority) {
       case 1:
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 2:
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 3:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   const getPriorityLabel = (priority: number) => {
-    switch (priority) {
-      case 1:
-        return 'High';
-      case 2:
-        return 'Medium';
-      case 3:
-        return 'Low';
-      default:
-        return 'Low';
-    }
+    return `P${priority}`;
   };
 
   const getStatusIcon = (status: string) => {
@@ -68,8 +59,14 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate }) => {
     }
   };
 
-  const isOverdue = (date: Date) => {
-    return date < new Date() && !isToday(date);
+  const isOverdue = (task: any) => {
+    // Completed tasks are never overdue
+    if (task.status === 'completed') {
+      return false;
+    }
+    // Task is overdue if due date is in the past and not today
+    const dueDate = new Date(task.dueDate);
+    return dueDate < new Date() && !isToday(dueDate);
   };
 
   const sortedTasks = tasks.sort((a, b) => {
@@ -118,7 +115,7 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate }) => {
             key={task.id}
             onClick={() => openTaskModal(task.id)}
             className={`p-4 bg-white border rounded-lg hover:shadow-md transition-shadow cursor-pointer ${
-              isOverdue(new Date(task.dueDate)) ? 'border-red-300 bg-red-50' : 'border-gray-200'
+              isOverdue(task) ? 'border-red-300 bg-red-50' : 'border-gray-200'
             }`}
           >
             <div className="flex items-start space-x-3">
@@ -150,7 +147,7 @@ const TaskList: React.FC<TaskListProps> = ({ selectedDate }) => {
                   </div>
                   
                   <div className="text-xs text-gray-500">
-                    {isOverdue(new Date(task.dueDate)) ? (
+                    {isOverdue(task) ? (
                       <span className="text-red-600 font-medium">Overdue</span>
                     ) : (
                       format(new Date(task.dueDate), 'MMM d')

@@ -10,9 +10,17 @@
       "mcp__supabase__execute_sql",
       "mcp__supabase__list_projects",
       "mcp__supabase__list_tables",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Read(//Users/yorpeli/Documents/Documents - Yonatan's MacBook Air/Dev/freshstart/src/components/**)",
+      "Read(//Users/yorpeli/Documents/Documents - Yonatan's MacBook Air/Dev/**)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)"
     ],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "/Users/yorpeli/Documents"
+    ]
   },
   "enabledMcpjsonServers": [
     "supabase"

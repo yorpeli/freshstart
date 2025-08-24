@@ -133,9 +133,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
   const getPriorityColor = (priority: number | null): string => {
     if (!priority) return 'bg-gray-100 text-gray-800';
     switch (priority) {
-      case 1: return 'bg-red-100 text-red-800';
+      case 1: return 'bg-green-100 text-green-800';
       case 2: return 'bg-yellow-100 text-yellow-800';
-      case 3: return 'bg-green-100 text-green-800';
+      case 3: return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
