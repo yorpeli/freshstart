@@ -5,11 +5,12 @@ import { EmptyState } from '../../shared';
 
 interface NotesListProps {
   notes: NoteWithRelationships[];
+  onViewNote: (note: NoteWithRelationships) => void;
   onEditNote: (note: NoteWithRelationships) => void;
   onDeleteNote: (id: string) => void;
 }
 
-const NotesList: React.FC<NotesListProps> = ({ notes, onEditNote, onDeleteNote }) => {
+const NotesList: React.FC<NotesListProps> = ({ notes, onViewNote, onEditNote, onDeleteNote }) => {
   if (notes.length === 0) {
     return (
       <EmptyState
@@ -32,6 +33,7 @@ const NotesList: React.FC<NotesListProps> = ({ notes, onEditNote, onDeleteNote }
           <NoteCard
             key={note.id}
             note={note}
+            onView={() => onViewNote(note)}
             onEdit={() => onEditNote(note)}
             onDelete={() => onDeleteNote(note.id)}
           />

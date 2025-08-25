@@ -3,6 +3,7 @@ import { useNotes } from '../../../hooks/useNotes';
 import type { NoteWithRelationships, CreateNoteData } from '../../../lib/types';
 import NotesList from './NotesList';
 import NoteForm from './NoteForm';
+import NoteViewModal from './NoteViewModal';
 import NotesFilters from './NotesFilters';
 import NotesSearch from './NotesSearch';
 import { ViewHeader } from '../../shared';
@@ -23,6 +24,7 @@ const NotesContainer: React.FC = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNote, setEditingNote] = useState<NoteWithRelationships | null>(null);
+  const [viewingNote, setViewingNote] = useState<NoteWithRelationships | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleCreateNote = async (noteData: CreateNoteData) => {
@@ -104,6 +106,7 @@ const NotesContainer: React.FC = () => {
           {/* Notes List */}
           <NotesList
             notes={notes}
+            onViewNote={setViewingNote}
             onEditNote={setEditingNote}
             onDeleteNote={handleDeleteNote}
           />
@@ -126,6 +129,15 @@ const NotesContainer: React.FC = () => {
           note={editingNote}
           onSubmit={(noteData) => handleUpdateNote(editingNote.id, noteData)}
           onCancel={() => setEditingNote(null)}
+        />
+      )}
+
+      {/* View Note Modal */}
+      {viewingNote && (
+        <NoteViewModal
+          note={viewingNote}
+          isOpen={!!viewingNote}
+          onClose={() => setViewingNote(null)}
         />
       )}
     </div>

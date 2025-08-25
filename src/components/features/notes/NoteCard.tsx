@@ -2,15 +2,17 @@ import React from 'react';
 import type { NoteWithRelationships } from '../../../lib/types';
 import { Card } from '../../ui';
 import { Badge } from '../../ui';
+import { MarkdownRenderer } from './';
 import { formatDistanceToNow } from 'date-fns';
 
 interface NoteCardProps {
   note: NoteWithRelationships;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ note, onView, onEdit, onDelete }) => {
   const getImportanceColor = (importance: string) => {
     switch (importance) {
       case 'critical':
@@ -39,7 +41,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
         <div key="phases" className="flex flex-wrap gap-1">
           <span className="text-xs text-gray-500">Phases:</span>
           {note.connected_phases.map((phase) => (
-            <Badge key={phase.phase_id} variant="secondary" size="sm">
+            <Badge key={phase.phase_id} variant="default" size="sm">
               {phase.phase_name}
             </Badge>
           ))}
@@ -52,7 +54,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
         <div key="meetings" className="flex flex-wrap gap-1">
           <span className="text-xs text-gray-500">Meetings:</span>
           {note.connected_meetings.map((meeting) => (
-            <Badge key={meeting.meeting_id} variant="secondary" size="sm">
+            <Badge key={meeting.meeting_id} variant="default" size="sm">
               {meeting.meeting_name}
             </Badge>
           ))}
@@ -65,7 +67,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
         <div key="initiatives" className="flex flex-wrap gap-1">
           <span className="text-xs text-gray-500">Initiatives:</span>
           {note.connected_initiatives.map((initiative) => (
-            <Badge key={initiative.initiative_id} variant="secondary" size="sm">
+            <Badge key={initiative.initiative_id} variant="default" size="sm">
               {initiative.initiative_name}
             </Badge>
           ))}
@@ -78,7 +80,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
         <div key="workstreams" className="flex flex-wrap gap-1">
           <span className="text-xs text-gray-500">Workstreams:</span>
           {note.connected_workstreams.map((workstream) => (
-            <Badge key={workstream.workstream_id} variant="secondary" size="sm">
+            <Badge key={workstream.workstream_id} variant="default" size="sm">
               {workstream.workstream_name}
             </Badge>
           ))}
@@ -107,9 +109,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
 
       {/* Content Preview */}
       <div className="flex-1 mb-4">
-        <p className="text-gray-600 text-sm leading-relaxed">
-          {truncateText(note.body)}
-        </p>
+        <div className="text-gray-600 text-sm leading-relaxed">
+          <MarkdownRenderer 
+            content={truncateText(note.body, 150)} 
+            className="text-sm"
+          />
+        </div>
       </div>
 
       {/* Tags */}
@@ -139,6 +144,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete }) => {
             {formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={onView}
+              className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+            >
+              View
+            </button>
             <button
               onClick={onEdit}
               className="text-sm text-blue-600 hover:text-blue-800 font-medium"
