@@ -7,6 +7,7 @@ export interface QuickMeetingModalProps {
   onEditTime?: (meetingId: number, newDate: Date, newDuration: number) => void;
   onChangeStatus?: (meetingId: number, newStatus: string) => void;
   onViewFullDetails?: (meetingId: number) => void;
+  onDownloadICS?: (meetingId: number) => void;
   className?: string;
 }
 
@@ -30,6 +31,7 @@ export interface QuickMeetingActionsProps {
   onEditTime?: (meetingId: number, newDate: Date, newDuration: number) => void;
   onChangeStatus?: (meetingId: number, newStatus: string) => void;
   onViewFullDetails?: (meetingId: number) => void;
+  onDownloadICS?: (meetingId: number) => void;
   className?: string;
 }
 

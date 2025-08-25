@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Edit3, Eye, MoreHorizontal } from 'lucide-react';
+import { Clock, Edit3, Eye, MoreHorizontal, Download } from 'lucide-react';
 import type { QuickMeetingActionsProps } from '../index';
 import TimeEditModal from './TimeEditModal';
 import StatusChangeModal from './StatusChangeModal';
@@ -9,6 +9,7 @@ const QuickMeetingActions: React.FC<QuickMeetingActionsProps> = ({
   onEditTime,
   onChangeStatus,
   onViewFullDetails,
+  onDownloadICS,
   className = ''
 }) => {
   const [showTimeEdit, setShowTimeEdit] = useState(false);
@@ -31,6 +32,12 @@ const QuickMeetingActions: React.FC<QuickMeetingActionsProps> = ({
   const handleViewFullDetails = () => {
     if (onViewFullDetails) {
       onViewFullDetails(meeting.meeting_id);
+    }
+  };
+
+  const handleDownloadICS = () => {
+    if (onDownloadICS) {
+      onDownloadICS(meeting.meeting_id);
     }
   };
 
@@ -57,6 +64,17 @@ const QuickMeetingActions: React.FC<QuickMeetingActionsProps> = ({
             >
               <Edit3 className="h-4 w-4 mr-2" />
               Change Status
+            </button>
+          )}
+
+          {/* Download ICS Button */}
+          {onDownloadICS && (
+            <button
+              onClick={handleDownloadICS}
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download ICS
             </button>
           )}
         </div>

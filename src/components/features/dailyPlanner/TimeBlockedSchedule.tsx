@@ -33,13 +33,7 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
   const startDate = viewRange[0];
   const endDate = viewRange[viewRange.length - 1];
   
-  console.log('TimeBlockedSchedule - Props:', {
-    selectedDate: selectedDate.toISOString(),
-    viewMode,
-    viewRange: viewRange.map(d => d.toISOString()),
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString()
-  });
+
   
   // Fetch real meetings from Supabase
   const { data: meetings, isLoading, error } = useMeetings(startDate, endDate);
@@ -48,21 +42,14 @@ const TimeBlockedSchedule: React.FC<TimeBlockedScheduleProps> = ({ selectedDate,
   const timeBlocks: TimeBlock[] = React.useMemo(() => {
     if (!meetings) return [];
 
-    console.log('TimeBlockedSchedule - Processing meetings:', meetings);
+
 
     return meetings.map((meeting) => {
       const meetingDate = parseISO(meeting.scheduled_date);
       const startTime = format(meetingDate, 'HH:mm');
       const endTime = format(new Date(meetingDate.getTime() + meeting.duration_minutes * 60000), 'HH:mm');
       
-      console.log('TimeBlockedSchedule - Meeting block:', {
-        meeting: meeting.meeting_name,
-        scheduled_date: meeting.scheduled_date,
-        parsedDate: meetingDate.toISOString(),
-        startTime,
-        endTime,
-        duration: meeting.duration_minutes
-      });
+
       
       return {
         id: `meeting-${meeting.meeting_id}`,
