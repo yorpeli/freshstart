@@ -11,7 +11,8 @@ import {
   Video,
   Clock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  StickyNote
 } from 'lucide-react';
 import type { NavigationItem } from '../../lib/types';
 
@@ -22,6 +23,7 @@ const navigation: NavigationItem[] = [
   { name: 'Tasks', href: '/tasks', icon: 'CheckSquare', current: false },
   { name: 'Meetings', href: '/meetings', icon: 'Video', current: false },
   { name: 'Workstreams', href: '/workstreams', icon: 'Target', current: false },
+  { name: 'Notes', href: '/notes', icon: 'StickyNote', current: false },
   { name: 'People', href: '/people', icon: 'Users', current: false },
   { name: 'Departments', href: '/departments', icon: 'Building2', current: false },
   { name: 'Meeting Types', href: '/meeting-types', icon: 'CalendarDays', current: false },
@@ -37,6 +39,7 @@ const iconMap = {
   CalendarDays,
   Video,
   Clock,
+  StickyNote,
 };
 
 interface SidebarProps {

@@ -23,6 +23,13 @@
 11. **`meeting_attendees`** - Meeting participants with roles/status
 12. **`workstreams`** - Strategic focus areas (4 workstreams)
 
+#### **Notes System Tables (NEW)**
+13. **`notes`** - Unstructured thinking and insights storage
+14. **`note_phases`** - Notes ↔ phases relationships
+15. **`note_meetings`** - Notes ↔ meetings relationships
+16. **`note_initiatives`** - Notes ↔ initiatives relationships
+17. **`note_workstreams`** - Notes ↔ workstreams relationships
+
 ### ❌ **MISSING CRITICAL TABLES**
 
 #### **High Priority Missing Tables**
@@ -64,6 +71,12 @@ MEETINGS (Structured Conversations)
 ├── structured_notes (JSONB) - Agenda responses  
 ├── unstructured_notes (TEXT) - Transcriptions
 └── free_form_insights (TEXT) - Random observations
+
+NOTES (Unstructured Thinking) ← NEW
+├── Cross-references to phases, meetings, initiatives, workstreams
+├── Rich text content with mentions (@people, #tasks, !meetings)
+├── Tagged and categorized insights
+└── Full-text searchable content
 ```
 
 ### **Cross-Cutting Relationships**
@@ -505,6 +518,133 @@ CREATE TABLE decision_points (
 
 ---
 
+## 📝 **NOTES SYSTEM (NEW)**
+
+### **Purpose**
+The notes system provides unstructured thinking space for capturing insights, observations, and thoughts that don't fit into the structured task or meeting frameworks. Notes can be connected to multiple entities and support rich text with mentions.
+
+### **1. NOTES Table**
+```sql
+id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+header TEXT NOT NULL -- Note title/summary
+body TEXT NOT NULL -- Rich text content (markdown)
+tags TEXT[] DEFAULT '{}' -- Array of tags for categorization
+importance TEXT CHECK (importance IN ('low', 'medium', 'high', 'critical')) DEFAULT 'medium'
+created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+```
+
+**Key Features:**
+- **Rich Text Content**: Body stores markdown-formatted text
+- **Flexible Tagging**: Array-based tags for easy categorization
+- **Importance Levels**: 4-tier importance system for prioritization
+- **Full-Text Search**: PostgreSQL full-text search with ranking
+- **Audit Trail**: Creation and update timestamps
+
+### **2. Notes Relationship Tables**
+```sql
+-- Notes ↔ Phases
+note_phases (note_id UUID, phase_id INT)
+-- Notes ↔ Meetings  
+note_meetings (note_id UUID, meeting_id INT)
+-- Notes ↔ Initiatives
+note_initiatives (note_id UUID, initiative_id INT)
+-- Notes ↔ Workstreams
+note_workstreams (note_id UUID, workstream_id INT)
+```
+
+**Relationship Features:**
+- **Many-to-Many**: Single note can connect to multiple entities
+- **Optional Connections**: Notes don't require any connections
+- **Flexible Referencing**: Connect insights to relevant work areas
+- **Cascade Deletion**: Removing a note removes all relationships
+
+### **3. Notes Search & Discovery**
+```sql
+-- Full-text search across header and body
+CREATE INDEX idx_notes_search ON notes USING GIN(
+    to_tsvector('english', header || ' ' || body)
+);
+
+-- Search function with ranking
+CREATE OR REPLACE FUNCTION search_notes(search_query TEXT)
+RETURNS TABLE(id UUID, header TEXT, body TEXT, rank REAL)
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT n.id, n.header, n.body,
+           ts_rank(to_tsvector('english', n.header || ' ' || n.body), 
+                   plainto_tsquery('english', search_query)) as rank
+    FROM notes n
+    WHERE to_tsvector('english', n.header || ' ' || n.body) 
+          @@ plainto_tsquery('english', search_query)
+    ORDER BY rank DESC;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### **4. Notes Views for Efficient Querying**
+```sql
+-- View showing notes with all relationships
+CREATE VIEW notes_with_relationships AS
+SELECT n.*,
+    json_agg(DISTINCT jsonb_build_object('phase_id', p.phase_id, 'phase_name', p.phase_name)) 
+        FILTER (WHERE p.phase_id IS NOT NULL) as connected_phases,
+    json_agg(DISTINCT jsonb_build_object('meeting_id', m.meeting_id, 'meeting_name', m.meeting_name)) 
+        FILTER (WHERE m.meeting_id IS NOT NULL) as connected_meetings,
+    json_agg(DISTINCT jsonb_build_object('initiative_id', i.initiative_id, 'initiative_name', i.initiative_name)) 
+        FILTER (WHERE i.initiative_id IS NOT NULL) as connected_initiatives,
+    json_agg(DISTINCT jsonb_build_object('workstream_id', w.workstream_id, 'workstream_name', w.workstream_name)) 
+        FILTER (WHERE w.workstream_id IS NOT NULL) as connected_workstreams
+FROM notes n
+LEFT JOIN note_phases np ON n.id = np.note_id
+LEFT JOIN phases p ON np.phase_id = p.phase_id
+LEFT JOIN note_meetings nm ON n.id = nm.note_id
+LEFT JOIN meetings m ON nm.meeting_id = m.meeting_id
+LEFT JOIN note_initiatives ni ON n.id = ni.note_id
+LEFT JOIN initiatives i ON ni.initiative_id = i.initiative_id
+LEFT JOIN note_workstreams nw ON n.id = nw.note_id
+LEFT JOIN workstreams w ON nw.workstream_id = w.workstream_id
+GROUP BY n.id, n.header, n.body, n.tags, n.importance, n.created_at, n.updated_at, n.created_by;
+```
+
+### **5. Notes User Flows**
+
+#### **Flow 1: Creating a Note**
+```mermaid
+1. User clicks "New Note"
+2. Enters header (title) and body (content)
+3. Optionally adds tags and sets importance
+4. Optionally connects to phases, meetings, initiatives, workstreams
+5. System stores as markdown with full-text search index
+```
+
+#### **Flow 2: Note Discovery**
+```mermaid
+1. User searches notes by text content
+2. System returns ranked results from full-text search
+3. User filters by tags, importance, or connected entities
+4. System displays notes with relationship context
+```
+
+#### **Flow 3: Rich Text with Mentions**
+```mermaid
+1. User types @person_name → System suggests people
+2. User types #task_name → System suggests tasks  
+3. User types !meeting_name → System suggests meetings
+4. Mentions become clickable links to referenced entities
+```
+
+### **6. Notes Integration Points**
+- **Phase View**: Show connected notes in insights section
+- **Meeting View**: Display related notes for context
+- **Task View**: Show relevant notes and observations
+- **Workstream View**: Aggregate notes by strategic focus area
+- **Global Search**: Include notes in cross-entity search results
+
+---
+
 ## 📱 **Implementation Priority Order**
 
 ### **Phase 1: Core Functionality (Week 1)**
@@ -520,24 +660,30 @@ CREATE TABLE decision_points (
    - Status tracking
    - Planned vs action item distinction
 
+3. **Notes System** ✅ **COMPLETED**
+   - Database schema and relationships
+   - Full-text search functionality
+   - TypeScript types and Supabase API
+   - Custom hooks for state management
+
 ### **Phase 2: Advanced Features (Week 2)**
-3. **Metrics Dashboard**
+4. **Metrics Dashboard**
    - Implement metrics_baseline table
    - Success tracking visualization
    - Progress indicators
 
-4. **Decision Points**
+5. **Decision Points**
    - Implement decision_points table
    - Go/no-go workflow
    - Critical milestone tracking
 
 ### **Phase 3: Polish & Integration (Week 3)**
-5. **Cross-functional Views**
+6. **Cross-functional Views**
    - Workstream filtering
    - People-centric views
    - Timeline visualizations
 
-6. **Reporting & Analytics**
+7. **Reporting & Analytics**
    - Phase progress reports
    - Meeting effectiveness metrics
    - Action item completion rates
@@ -567,7 +713,14 @@ CREATE TABLE decision_points (
 - People involvement in tasks
 - Meeting attendee management
 
-### **5. JSONB Query Performance**
+### **6. Notes System Integration** ✅ **IMPLEMENTED**
+- Rich text content with markdown support
+- Flexible entity connections (phases, meetings, initiatives, workstreams)
+- Full-text search with ranking and relevance
+- Mention system for cross-referencing (@people, #tasks, !meetings)
+- Tag-based categorization and filtering
+
+### **7. JSONB Query Performance**
 - Index JSONB fields for common queries
 - Optimize template_data searches
 - Handle complex JSONB updates efficiently

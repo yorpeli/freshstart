@@ -26,6 +26,15 @@ MEETING_TYPES (templates) → MEETINGS (instances)
 TASK_TYPES (normalized) → TASKS (instances)
 ```
 
+### **Notes System (NEW)**
+```
+NOTES (unstructured content) ↔ PHASES/MEETINGS/INITIATIVES/WORKSTREAMS
+├── Rich text with mentions (@people, #tasks, !meetings)
+├── Flexible tagging and categorization
+├── Full-text search capabilities
+└── Optional entity connections
+```
+
 ---
 
 ## 🗂️ **Detailed Table Documentation**
@@ -98,17 +107,22 @@ UPDATE phases SET success_checkpoints = jsonb_set(success_checkpoints, '{knowled
 
 -- ✅ Safe: Create new milestone task (instead of updating key_milestones)
 INSERT INTO tasks (phase_id, task_name, description, owner_id, task_type_id, due_date)
-VALUES (1, 'Critical Decision Point', 'Make go/no-go decision', 1, 9, '2025-09-20');
+VALUES (1, 'New Milestone', 'Description', 1, 9, '2025-09-20');
 
--- ❌ Dangerous: Never update generated columns
--- UPDATE phases SET start_week = 2 WHERE phase_id = 1; -- Will fail
+-- ❌ DANGEROUS: Never update generated columns directly
+-- UPDATE phases SET start_week = 5 WHERE phase_id = 1; -- This will break!
 
--- ❌ Dangerous: Don't break percentage logic
--- UPDATE phases SET learning_percentage = 90, value_percentage = 30 WHERE phase_id = 1; -- Totals 120%
-
--- ❌ Deprecated: Don't use key_milestones field
--- UPDATE phases SET key_milestones = '{"milestone": "..."}' WHERE phase_id = 1; -- Field no longer used
+-- ❌ DANGEROUS: Never update key_milestones field
+-- UPDATE phases SET key_milestones = '{"new": "data"}' WHERE phase_id = 1; -- Deprecated!
 ```
+
+**Safe Operations for Phases:**
+- ✅ Update descriptions, constraints, success criteria
+- ✅ Modify learning/value percentages (ensure they sum to 100)
+- ✅ Add/remove working days
+- ✅ Update phase outcomes
+- ❌ Never modify start_week/end_week (generated columns)
+- ❌ Never modify key_milestones (deprecated field)
 
 ---
 

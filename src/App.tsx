@@ -10,6 +10,7 @@ import TasksView from './components/views/TasksView';
 import MeetingsView from './components/views/MeetingsView';
 import MeetingDetailView from './components/views/MeetingDetailView';
 import WorkstreamsView from './components/views/WorkstreamsView';
+import NotesView from './components/views/NotesView';
 import PeopleView from './components/views/PeopleView';
 import DepartmentsView from './components/views/DepartmentsView';
 import MeetingTypesView from './components/views/MeetingTypesView';
@@ -51,6 +52,11 @@ function App() {
             <Route path="/workstreams" element={
               <ErrorBoundary>
                 <WorkstreamsView />
+              </ErrorBoundary>
+            } />
+            <Route path="/notes" element={
+              <ErrorBoundary>
+                <NotesView />
               </ErrorBoundary>
             } />
             <Route path="/people" element={<PeopleView />} />

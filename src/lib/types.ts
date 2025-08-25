@@ -150,3 +150,88 @@ export const workstreamColors = {
   'People': 'bg-workstream-people text-white',
   'Partnerships': 'bg-workstream-partnerships text-white',
 } as const;
+
+// Notes system types
+export interface Note {
+  id: string;
+  header: string;
+  body: string;
+  tags: string[];
+  importance: 'low' | 'medium' | 'high' | 'critical';
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  // Computed/joined fields
+  connected_phases?: ConnectedPhase[];
+  connected_meetings?: ConnectedMeeting[];
+  connected_initiatives?: ConnectedInitiative[];
+  connected_workstreams?: ConnectedWorkstream[];
+}
+
+export interface ConnectedPhase {
+  phase_id: number;
+  phase_name: string;
+}
+
+export interface ConnectedMeeting {
+  meeting_id: number;
+  meeting_name: string;
+}
+
+export interface ConnectedInitiative {
+  initiative_id: number;
+  initiative_name: string;
+}
+
+export interface ConnectedWorkstream {
+  workstream_id: number;
+  workstream_name: string;
+}
+
+export interface NoteWithRelationships {
+  id: string;
+  header: string;
+  body: string;
+  tags: string[];
+  importance: 'low' | 'medium' | 'high' | 'critical';
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  connected_phases: ConnectedPhase[];
+  connected_meetings: ConnectedMeeting[];
+  connected_initiatives: ConnectedInitiative[];
+  connected_workstreams: ConnectedWorkstream[];
+}
+
+export interface NoteFilters {
+  search?: string;
+  tags?: string[];
+  importance?: 'low' | 'medium' | 'high' | 'critical';
+  connected_entity_type?: 'phase' | 'meeting' | 'initiative' | 'workstream';
+  connected_entity_id?: number;
+  created_by?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface CreateNoteData {
+  header: string;
+  body: string;
+  tags?: string[];
+  importance?: 'low' | 'medium' | 'high' | 'critical';
+  connected_phases?: number[];
+  connected_meetings?: number[];
+  connected_initiatives?: number[];
+  connected_workstreams?: number[];
+}
+
+export interface UpdateNoteData {
+  header?: string;
+  body?: string;
+  tags?: string[];
+  importance?: 'low' | 'medium' | 'high' | 'critical';
+  connected_phases?: number[];
+  connected_meetings?: number[];
+  connected_initiatives?: number[];
+  connected_workstreams?: number[];
+}
