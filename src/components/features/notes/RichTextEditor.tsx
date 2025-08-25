@@ -103,9 +103,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           e.preventDefault();
           applyFormatting('*', '*');
           break;
-        case 'l':
+        case 'k':
           e.preventDefault();
-          applyFormatting('[', '](url)');
+          makeLink();
           break;
       }
     }
@@ -114,8 +114,54 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // Formatting functions
   const makeBold = () => applyFormatting('**', '**');
   const makeItalic = () => applyFormatting('*', '*');
-  const makeLink = () => applyFormatting('[', '](url)');
   
+  const makeLink = () => {
+    const { start, end, text } = getSelection();
+    if (text) {
+      // If text is selected, wrap it in a link
+      const linkText = prompt('Enter link text (or press Enter to use selected text):', text);
+      if (linkText === null) return; // User cancelled
+      
+      const url = prompt('Enter URL:');
+      if (url === null) return; // User cancelled
+      
+      const linkMarkdown = `[${linkText || text}](${url})`;
+      const newText = internalValue.substring(0, start) + linkMarkdown + internalValue.substring(end);
+      
+      setInternalValue(newText);
+      onChange(newText);
+      
+      // Set cursor position after the link
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(start + linkMarkdown.length, start + linkMarkdown.length);
+        }
+      }, 0);
+    } else {
+      // If no text selected, insert a link template
+      const linkText = prompt('Enter link text:');
+      if (linkText === null) return; // User cancelled
+      
+      const url = prompt('Enter URL:');
+      if (url === null) return; // User cancelled
+      
+      const linkMarkdown = `[${linkText}](${url})`;
+      const newText = internalValue.substring(0, start) + linkMarkdown + internalValue.substring(start);
+      
+      setInternalValue(newText);
+      onChange(newText);
+      
+      // Set cursor position after the link
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(start + linkMarkdown.length, start + linkMarkdown.length);
+        }
+      }, 0);
+    }
+  };
+
   const makeList = () => {
     const { start, end, text } = getSelection();
     if (text) {
@@ -168,6 +214,49 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }, 0);
   };
 
+  // Auto-convert URLs to markdown links
+  const convertUrlsToLinks = () => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    let newText = internalValue;
+    let match;
+    let offset = 0;
+    
+    while ((match = urlRegex.exec(internalValue)) !== null) {
+      const url = match[1];
+      const start = match.index + offset;
+      const end = start + url.length;
+      
+      // Check if this URL is already in a markdown link
+      const beforeText = newText.substring(0, start);
+      const afterText = newText.substring(end);
+      
+      // If it's not already a markdown link, convert it
+      if (!beforeText.match(/\[[^\]]*\]\([^)]*$/)) {
+        const linkMarkdown = `[${url}](${url})`;
+        newText = beforeText + linkMarkdown + afterText;
+        offset += linkMarkdown.length - url.length;
+      }
+    }
+    
+    if (newText !== internalValue) {
+      setInternalValue(newText);
+      onChange(newText);
+    }
+  };
+
+  // Handle paste events to auto-convert URLs
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    
+    // Check if pasted text contains URLs
+    if (pastedText.match(/https?:\/\/[^\s]+/)) {
+      // Let the paste happen, then convert URLs
+      setTimeout(() => {
+        convertUrlsToLinks();
+      }, 0);
+    }
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded-t-md">
@@ -199,7 +288,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           type="button"
           onClick={makeLink}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
-          title="Link (Ctrl+L)"
+          title="Link (Ctrl+K)"
         >
           <span className="text-sm">🔗</span>
         </button>
@@ -242,6 +331,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         value={internalValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         placeholder={placeholder}
         className="w-full h-32 p-3 border border-gray-300 rounded-b-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
       />
@@ -269,7 +359,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       
       <div className="text-xs text-gray-500 flex justify-between items-center">
         <span>{internalValue.length} characters</span>
-        <span className="text-gray-400">Markdown supported</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={convertUrlsToLinks}
+            className="text-blue-600 hover:text-blue-800 text-xs underline"
+            title="Convert URLs to clickable links"
+          >
+            Convert URLs
+          </button>
+          <span className="text-gray-400">Markdown supported</span>
+        </div>
       </div>
     </div>
   );

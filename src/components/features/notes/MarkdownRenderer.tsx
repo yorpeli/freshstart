@@ -18,6 +18,38 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
     return text;
   };
 
+  // Convert plain URLs to markdown links if they're not already formatted
+  const preprocessContent = (text: string) => {
+    // First, let's handle any incomplete markdown links
+    let processedText = text;
+    
+    // Look for incomplete markdown links like [text](url that got cut off
+    const incompleteLinkRegex = /\[([^\]]*)\]\(([^)]*)$/g;
+    processedText = processedText.replace(incompleteLinkRegex, (match, linkText, url) => {
+      // If the URL is incomplete, try to complete it or remove the incomplete link
+      if (url && url.trim()) {
+        // Check if this looks like a valid URL
+        if (url.match(/^https?:\/\//)) {
+          // It's a valid URL, complete the link
+          return `[${linkText}](${url})`;
+        }
+      }
+      // Remove incomplete link and just show the text
+      return linkText;
+    });
+    
+    // Now convert any remaining plain URLs to markdown links
+    // Look for URLs that are not already in markdown links
+    const urlRegex = /(?<!\[[^\]]*\]\()(https?:\/\/[^\s]+)/g;
+    processedText = processedText.replace(urlRegex, (url) => {
+      // Create a shorter display text for the link
+      const displayText = url.length > 50 ? url.substring(0, 47) + '...' : url;
+      return `[${displayText}](${url})`;
+    });
+    
+    return processedText;
+  };
+
   const handleMentionClick = (type: 'people' | 'tasks' | 'meetings', text: string) => {
     // Remove the symbol from the text for display
     const cleanText = text.substring(1);
@@ -39,6 +71,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
     // }
   };
 
+  // Preprocess the content to fix any URL formatting issues
+  const processedContent = preprocessContent(content);
+
   return (
     <div className={`prose prose-sm max-w-none ${className}`}>
       <ReactMarkdown
@@ -51,11 +86,18 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
             // Process mentions in paragraph text
             if (typeof children === 'string') {
               const mentionRegex = /(@\w+)|(#\w+)|(!\w+)/g;
-              const parts = [];
+              const parts: React.ReactNode[] = [];
               let lastIndex = 0;
-              let match;
-
+              
+              // Process all mentions
+              const matches: RegExpExecArray[] = [];
+              let match: RegExpExecArray | null;
               while ((match = mentionRegex.exec(children)) !== null) {
+                matches.push(match);
+              }
+              
+              // Process matches in order
+              matches.forEach((match) => {
                 // Add text before the mention
                 if (match.index > lastIndex) {
                   parts.push(children.substring(lastIndex, match.index));
@@ -75,7 +117,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
                 );
 
                 lastIndex = match.index + match[0].length;
-              }
+              });
 
               // Add remaining text
               if (lastIndex < children.length) {
@@ -92,16 +134,25 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
           ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
           li: ({ children }) => <li className="text-gray-700">{children}</li>,
-          a: ({ href, children }) => (
-            <a 
-              href={href} 
-              className="text-blue-600 hover:text-blue-800 underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) => {
+            // Ensure href is valid
+            if (!href) return <span>{children}</span>;
+            
+            // If children is empty or just whitespace, use the URL as display text
+            const displayText = children && children.toString().trim() ? children : href;
+            
+            return (
+              <a 
+                href={href} 
+                className="text-blue-600 hover:text-blue-800 underline hover:no-underline transition-all duration-200"
+                target="_blank"
+                rel="noopener noreferrer"
+                title={href}
+              >
+                {displayText}
+              </a>
+            );
+          },
           blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-2">
               {children}
@@ -121,7 +172,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
           hr: () => <hr className="border-gray-300 my-4" />,
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

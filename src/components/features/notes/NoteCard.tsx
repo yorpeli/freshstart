@@ -30,7 +30,64 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, onEdit, onDelete }) =
 
   const truncateText = (text: string, maxLength: number = 150) => {
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    
+    // Try to find a good breaking point that doesn't cut markdown links
+    const truncated = text.substring(0, maxLength);
+    
+    // Look for the last complete word or markdown element
+    let lastGoodBreak = maxLength;
+    
+    // Check if we're in the middle of a markdown link
+    const linkMatch = truncated.match(/\[([^\]]*)\]\([^)]*$/);
+    if (linkMatch) {
+      // We're in the middle of a link, try to break before it
+      const beforeLink = truncated.lastIndexOf('[', maxLength - 1);
+      if (beforeLink > maxLength * 0.7) { // Only break if we're not too far back
+        lastGoodBreak = beforeLink;
+      }
+    }
+    
+    // Check if we're in the middle of a word
+    const lastSpace = truncated.lastIndexOf(' ', lastGoodBreak);
+    if (lastSpace > maxLength * 0.8) { // Only break at space if we're not too far back
+      lastGoodBreak = lastSpace;
+    }
+    
+    return text.substring(0, lastGoodBreak) + '...';
+  };
+
+  // Create a clean preview text that preserves markdown links
+  const createContentPreview = (content: string, maxLength: number = 150) => {
+    // First, let's try to find a good breaking point
+    let preview = truncateText(content, maxLength);
+    
+    // If the preview ends with a truncated markdown link, try to complete it
+    if (preview.endsWith('...') && preview.includes('[') && !preview.includes('](')) {
+      // Find the last incomplete link and try to complete it
+      const lastBracket = preview.lastIndexOf('[');
+      if (lastBracket > maxLength * 0.5) { // Only if we're not too far back
+        // Look for the closing bracket and URL in the original content
+        const afterBracket = content.substring(lastBracket);
+        const linkMatch = afterBracket.match(/^\[([^\]]*)\]\(([^)]+)\)/);
+        if (linkMatch) {
+          // We can complete this link
+          const linkText = linkMatch[1];
+          const url = linkMatch[2];
+          const completeLink = `[${linkText}](${url})`;
+          
+          // Check if we can fit the complete link
+          const beforeLink = preview.substring(0, lastBracket);
+          if (beforeLink.length + completeLink.length <= maxLength) {
+            preview = beforeLink + completeLink;
+          } else {
+            // Can't fit the complete link, break before it
+            preview = beforeLink + '...';
+          }
+        }
+      }
+    }
+    
+    return preview;
   };
 
   const renderConnectedEntities = () => {
@@ -111,7 +168,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onView, onEdit, onDelete }) =
       <div className="flex-1 mb-4">
         <div className="text-gray-600 text-sm leading-relaxed">
           <MarkdownRenderer 
-            content={truncateText(note.body, 150)} 
+            content={createContentPreview(note.body, 150)} 
             className="text-sm"
           />
         </div>
