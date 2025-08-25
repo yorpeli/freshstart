@@ -13,6 +13,10 @@ export interface Meeting {
   phase_name: string;
   initiative_name: string;
   attendees: string[];
+  // Google Calendar sync fields
+  google_calendar_event_id?: string;
+  google_calendar_sync_status?: 'synced' | 'pending' | 'error';
+  google_calendar_last_sync?: string;
 }
 
 export const useMeetings = (startDate: Date, endDate: Date) => {
@@ -60,6 +64,10 @@ export const useMeetings = (startDate: Date, endDate: Date) => {
         attendees: meeting.meeting_attendees?.map((attendee: any) => 
           `${attendee.people?.first_name || ''} ${attendee.people?.last_name || ''}`.trim()
         ).filter(Boolean) || [],
+        // Google Calendar fields - will be added after database migration
+        google_calendar_event_id: undefined,
+        google_calendar_sync_status: undefined,
+        google_calendar_last_sync: undefined,
       }));
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

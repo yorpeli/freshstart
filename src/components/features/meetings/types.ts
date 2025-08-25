@@ -14,6 +14,10 @@ export interface MeetingWithRelations {
     name: string;
     role: string;
   }>;
+  // Google Calendar sync fields
+  google_calendar_event_id?: string;
+  google_calendar_sync_status?: 'synced' | 'pending' | 'error';
+  google_calendar_last_sync?: string;
 }
 
 export interface MeetingsFiltersState {

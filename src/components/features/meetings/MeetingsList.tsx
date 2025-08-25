@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import MeetingDetailModal from './MeetingDetailModal/MeetingDetailModal';
 import MeetingsFilters from './MeetingsFilters';
 import { useMeetingsFilters } from './hooks/useMeetingsFilters';
+import { SyncToCalendarButton } from './GoogleCalendarSync';
 import type { MeetingWithRelations } from './types';
 
 
@@ -66,7 +67,11 @@ const MeetingsList: React.FC = () => {
         attendees: meeting.meeting_attendees?.map((attendee: any) => ({
           name: `${attendee.people?.first_name || ''} ${attendee.people?.last_name || ''}`.trim(),
           role: attendee.role_in_meeting || 'unknown'
-        })) || []
+        })) || [],
+        // Google Calendar fields - will be added after database migration
+        google_calendar_event_id: undefined,
+        google_calendar_sync_status: undefined,
+        google_calendar_last_sync: undefined
       }));
       
       setMeetings(transformedMeetings);
@@ -217,19 +222,32 @@ const MeetingsList: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Calendar
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMeetings.map((meeting) => (
-                <tr key={meeting.meeting_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => navigate(`/meetings/${meeting.meeting_id}`)}
-                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors text-left"
-                    >
-                      {meeting.meeting_name}
-                    </button>
-                  </td>
+              {filteredMeetings.map((meeting) => {
+                // Debug logging for first meeting
+                if (meeting.meeting_id === filteredMeetings[0]?.meeting_id) {
+                  console.log('First meeting data:', meeting);
+                  console.log('Google Calendar fields:', {
+                    google_calendar_event_id: meeting.google_calendar_event_id,
+                    google_calendar_sync_status: meeting.google_calendar_sync_status
+                  });
+                }
+                
+                return (
+                  <tr key={meeting.meeting_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => navigate(`/meetings/${meeting.meeting_id}`)}
+                        className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors text-left"
+                      >
+                        {meeting.meeting_name}
+                      </button>
+                    </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {getMeetingTypeName(meeting)}
@@ -272,15 +290,29 @@ const MeetingsList: React.FC = () => {
                     })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleViewDetails(meeting.meeting_id)}
-                      className="text-indigo-600 hover:text-indigo-900"
-                    >
-                      View Details
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleViewDetails(meeting.meeting_id)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex justify-center">
+                      <SyncToCalendarButton
+                        meetingId={meeting.meeting_id}
+                        isAlreadySynced={!!meeting.google_calendar_event_id}
+                        googleEventId={meeting.google_calendar_event_id}
+                        size="sm"
+                        variant="icon"
+                      />
+                    </div>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>

@@ -15,6 +15,7 @@ import PeopleView from './components/views/PeopleView';
 import DepartmentsView from './components/views/DepartmentsView';
 import MeetingTypesView from './components/views/MeetingTypesView';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { GoogleCalendarAuthProvider } from './contexts/GoogleCalendarAuthContext';
 import './App.css';
 
 // Create a client
@@ -31,40 +32,42 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<DashboardView />} />
-            <Route path="/daily-planner" element={<DailyPlannerView />} />
-            <Route path="/phases" element={<PhasesView />} />
-            <Route path="/phases/:id" element={<SinglePhaseView />} />
-            <Route path="/tasks" element={
-              <ErrorBoundary>
-                <TasksView />
-              </ErrorBoundary>
-            } />
-            <Route path="/meetings" element={
-              <ErrorBoundary>
-                <MeetingsView />
-              </ErrorBoundary>
-            } />
-            <Route path="/meetings/:id" element={<MeetingDetailView />} />
-            <Route path="/workstreams" element={
-              <ErrorBoundary>
-                <WorkstreamsView />
-              </ErrorBoundary>
-            } />
-            <Route path="/notes" element={
-              <ErrorBoundary>
-                <NotesView />
-              </ErrorBoundary>
-            } />
-            <Route path="/people" element={<PeopleView />} />
-            <Route path="/departments" element={<DepartmentsView />} />
-            <Route path="/meeting-types" element={<MeetingTypesView />} />
-          </Routes>
-        </Layout>
-      </Router>
+      <GoogleCalendarAuthProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<DashboardView />} />
+              <Route path="/daily-planner" element={<DailyPlannerView />} />
+              <Route path="/phases" element={<PhasesView />} />
+              <Route path="/phases/:id" element={<SinglePhaseView />} />
+              <Route path="/tasks" element={
+                <ErrorBoundary>
+                  <TasksView />
+                </ErrorBoundary>
+              } />
+              <Route path="/meetings" element={
+                <ErrorBoundary>
+                  <MeetingsView />
+                </ErrorBoundary>
+              } />
+              <Route path="/meetings/:id" element={<MeetingDetailView />} />
+              <Route path="/workstreams" element={
+                <ErrorBoundary>
+                  <WorkstreamsView />
+                </ErrorBoundary>
+              } />
+              <Route path="/notes" element={
+                <ErrorBoundary>
+                  <NotesView />
+                </ErrorBoundary>
+              } />
+              <Route path="/people" element={<PeopleView />} />
+              <Route path="/departments" element={<DepartmentsView />} />
+              <Route path="/meeting-types" element={<MeetingTypesView />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </GoogleCalendarAuthProvider>
     </QueryClientProvider>
   );
 }
