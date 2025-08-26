@@ -4,10 +4,11 @@ import type { MeetingWithRelations, MeetingsFiltersState } from '../types';
 const initialFilters: MeetingsFiltersState = {
   searchQuery: '',
   statusFilter: 'all',
-  meetingTypeFilter: 'all',
+  phaseFilter: 'all',
+  workstreamFilter: 'all',
   dateFilter: 'all',
   sortBy: 'scheduled_date',
-  sortOrder: 'desc'
+  sortOrder: 'asc'
 };
 
 export const useMeetingsFilters = (meetings: MeetingWithRelations[]) => {
@@ -26,12 +27,20 @@ export const useMeetingsFilters = (meetings: MeetingWithRelations[]) => {
                            (meeting.meeting_name && meeting.meeting_name.toLowerCase().includes(searchLower)) ||
                            (meeting.location_platform && meeting.location_platform.toLowerCase().includes(searchLower)) ||
                            (meeting.meeting_type?.type_name && meeting.meeting_type.type_name.toLowerCase().includes(searchLower)) ||
+                           (meeting.phase?.phase_name && meeting.phase.phase_name.toLowerCase().includes(searchLower)) ||
+                           (meeting.workstreams && meeting.workstreams.some(workstream => 
+                             workstream.workstream_name.toLowerCase().includes(searchLower)
+                           )) ||
                            (meeting.attendees && meeting.attendees.some(attendee => 
                              attendee.name.toLowerCase().includes(searchLower)
                            ));
       
       const matchesStatus = filters.statusFilter === 'all' || meeting.status === filters.statusFilter;
-      const matchesType = filters.meetingTypeFilter === 'all' || meeting.meeting_type?.type_name === filters.meetingTypeFilter;
+      const matchesPhase = filters.phaseFilter === 'all' || meeting.phase?.phase_id.toString() === filters.phaseFilter;
+      const matchesWorkstream = filters.workstreamFilter === 'all' || 
+                               (meeting.workstreams && meeting.workstreams.some(workstream => 
+                                 workstream.workstream_id.toString() === filters.workstreamFilter
+                               ));
       
       // Date filtering
       let matchesDate = true;
@@ -62,7 +71,7 @@ export const useMeetingsFilters = (meetings: MeetingWithRelations[]) => {
         }
       }
       
-      return matchesSearch && matchesStatus && matchesType && matchesDate;
+      return matchesSearch && matchesStatus && matchesPhase && matchesWorkstream && matchesDate;
     });
 
     // Then sort

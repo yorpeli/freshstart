@@ -10,6 +10,20 @@ export interface MeetingWithRelations {
   meeting_type?: {
     type_name: string;
   };
+  phase?: {
+    phase_id: number;
+    phase_name: string;
+    phase_number: number;
+  };
+  initiative?: {
+    initiative_id: number;
+    initiative_name: string;
+  };
+  workstreams?: Array<{
+    workstream_id: number;
+    workstream_name: string;
+    color_code: string;
+  }>;
   attendees?: Array<{
     name: string;
     role: string;
@@ -23,7 +37,8 @@ export interface MeetingWithRelations {
 export interface MeetingsFiltersState {
   searchQuery: string;
   statusFilter: string;
-  meetingTypeFilter: string;
+  phaseFilter: string;
+  workstreamFilter: string;
   dateFilter: string;
   sortBy: 'scheduled_date' | 'meeting_name' | 'duration_minutes' | 'created_at';
   sortOrder: 'asc' | 'desc';
@@ -31,6 +46,7 @@ export interface MeetingsFiltersState {
 
 export interface MeetingsFiltersProps {
   filters: MeetingsFiltersState;
-  meetingTypes: Array<{ meeting_type_id: number; type_name: string }>;
+  phases: Array<{ phase_id: number; phase_name: string; phase_number: number }>;
+  workstreams: Array<{ workstream_id: number; workstream_name: string; color_code: string }>;
   onFiltersChange: (filters: Partial<MeetingsFiltersState>) => void;
 }

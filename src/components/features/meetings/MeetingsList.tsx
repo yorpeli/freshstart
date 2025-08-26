@@ -13,6 +13,8 @@ const MeetingsList: React.FC = () => {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState<MeetingWithRelations[]>([]);
   const [meetingTypes, setMeetingTypes] = useState<any[]>([]);
+  const [phases, setPhases] = useState<any[]>([]);
+  const [workstreams, setWorkstreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
@@ -27,7 +29,9 @@ const MeetingsList: React.FC = () => {
       try {
         await Promise.all([
           fetchMeetings(),
-          fetchMeetingTypes()
+          fetchMeetingTypes(),
+          fetchPhases(),
+          fetchWorkstreams()
         ]);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -49,14 +53,30 @@ const MeetingsList: React.FC = () => {
           meeting_types (
             type_name
           ),
-          meeting_attendees!inner (
+          phases (
+            phase_id,
+            phase_name,
+            phase_number
+          ),
+          initiatives (
+            initiative_id,
+            initiative_name
+          ),
+          meeting_workstreams (
+            workstreams (
+              workstream_id,
+              workstream_name,
+              color_code
+            )
+          ),
+          meeting_attendees (
             people (
               first_name,
               last_name
             )
           )
         `)
-        .order('scheduled_date', { ascending: false });
+        .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
       
@@ -64,6 +84,9 @@ const MeetingsList: React.FC = () => {
       const transformedMeetings = (data || []).map(meeting => ({
         ...meeting,
         meeting_type: meeting.meeting_types,
+        phase: meeting.phases,
+        initiative: meeting.initiatives,
+        workstreams: meeting.meeting_workstreams?.map((mw: any) => mw.workstreams).filter(Boolean) || [],
         attendees: meeting.meeting_attendees?.map((attendee: any) => ({
           name: `${attendee.people?.first_name || ''} ${attendee.people?.last_name || ''}`.trim(),
           role: attendee.role_in_meeting || 'unknown'
@@ -93,8 +116,47 @@ const MeetingsList: React.FC = () => {
     }
   };
 
+  const fetchPhases = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('phases')
+        .select('phase_id, phase_name, phase_number')
+        .order('phase_number', { ascending: true });
+
+      if (error) throw error;
+      setPhases(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch phases');
+    }
+  };
+
+  const fetchWorkstreams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('workstreams')
+        .select('workstream_id, workstream_name, color_code')
+        .order('workstream_name', { ascending: true });
+
+      if (error) throw error;
+      setWorkstreams(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch workstreams');
+    }
+  };
+
   const getMeetingTypeName = (meeting: MeetingWithRelations) => {
     return meeting.meeting_type?.type_name || 'Unknown';
+  };
+
+  const getPhaseName = (meeting: MeetingWithRelations) => {
+    return meeting.phase ? `${meeting.phase.phase_number}. ${meeting.phase.phase_name}` : 'Unknown';
+  };
+
+  const getWorkstreamNames = (meeting: MeetingWithRelations) => {
+    if (!meeting.workstreams || meeting.workstreams.length === 0) {
+      return 'None';
+    }
+    return meeting.workstreams.map(w => w.workstream_name).join(', ');
   };
 
   const handleViewDetails = (meetingId: number) => {
@@ -176,6 +238,8 @@ const MeetingsList: React.FC = () => {
       <MeetingsFilters
         filters={filters}
         meetingTypes={meetingTypes}
+        phases={phases}
+        workstreams={workstreams}
         onFiltersChange={updateFilters}
       />
 
@@ -203,6 +267,12 @@ const MeetingsList: React.FC = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Phase
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Workstreams
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date & Time
@@ -251,6 +321,16 @@ const MeetingsList: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {getMeetingTypeName(meeting)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {getPhaseName(meeting)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {getWorkstreamNames(meeting)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

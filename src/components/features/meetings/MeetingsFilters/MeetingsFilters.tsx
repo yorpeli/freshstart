@@ -5,7 +5,8 @@ import Card from '../../../ui/Card';
 
 const MeetingsFilters: React.FC<MeetingsFiltersProps> = ({
   filters,
-  meetingTypes,
+  phases,
+  workstreams,
   onFiltersChange
 }) => {
   return (
@@ -39,16 +40,30 @@ const MeetingsFilters: React.FC<MeetingsFiltersProps> = ({
             <option value="cancelled">Cancelled</option>
           </select>
 
-          {/* Meeting Type Filter */}
+          {/* Phase Filter */}
           <select
-            value={filters.meetingTypeFilter}
-            onChange={(e) => onFiltersChange({ meetingTypeFilter: e.target.value })}
+            value={filters.phaseFilter}
+            onChange={(e) => onFiltersChange({ phaseFilter: e.target.value })}
             className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
           >
-            <option value="all">All Types</option>
-            {meetingTypes.map(type => (
-              <option key={type.meeting_type_id} value={type.type_name}>
-                {type.type_name.charAt(0).toUpperCase() + type.type_name.slice(1)}
+            <option value="all">All Phases</option>
+            {phases.map(phase => (
+              <option key={phase.phase_id} value={phase.phase_id.toString()}>
+                {phase.phase_number}. {phase.phase_name}
+              </option>
+            ))}
+          </select>
+
+          {/* Workstream Filter */}
+          <select
+            value={filters.workstreamFilter}
+            onChange={(e) => onFiltersChange({ workstreamFilter: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="all">All Workstreams</option>
+            {workstreams.map(workstream => (
+              <option key={workstream.workstream_id} value={workstream.workstream_id.toString()}>
+                {workstream.workstream_name}
               </option>
             ))}
           </select>
@@ -76,8 +91,8 @@ const MeetingsFilters: React.FC<MeetingsFiltersProps> = ({
             }}
             className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
           >
-            <option value="scheduled_date-desc">Date (Newest First)</option>
             <option value="scheduled_date-asc">Date (Oldest First)</option>
+            <option value="scheduled_date-desc">Date (Newest First)</option>
             <option value="meeting_name-asc">Name (A-Z)</option>
             <option value="meeting_name-desc">Name (Z-A)</option>
             <option value="duration_minutes-asc">Duration (Shortest First)</option>

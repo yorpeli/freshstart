@@ -6,3 +6,4 @@ const NotesView: React.FC = () => {
 };
 
 export default NotesView;
+
