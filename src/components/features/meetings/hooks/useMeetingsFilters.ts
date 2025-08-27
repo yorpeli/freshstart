@@ -38,9 +38,12 @@ export const useMeetingsFilters = (meetings: MeetingWithRelations[]) => {
       const matchesStatus = filters.statusFilter === 'all' || meeting.status === filters.statusFilter;
       const matchesPhase = filters.phaseFilter === 'all' || meeting.phase?.phase_id.toString() === filters.phaseFilter;
       const matchesWorkstream = filters.workstreamFilter === 'all' || 
-                               (meeting.workstreams && meeting.workstreams.some(workstream => 
-                                 workstream.workstream_id.toString() === filters.workstreamFilter
-                               ));
+                               (filters.workstreamFilter === 'none' 
+                                 ? (!meeting.workstreams || meeting.workstreams.length === 0)
+                                 : (meeting.workstreams && meeting.workstreams.some(workstream => 
+                                     workstream.workstream_id.toString() === filters.workstreamFilter
+                                   ))
+                               );
       
       // Date filtering
       let matchesDate = true;

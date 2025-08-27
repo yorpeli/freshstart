@@ -61,6 +61,7 @@ const MeetingsFilters: React.FC<MeetingsFiltersProps> = ({
             className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
           >
             <option value="all">All Workstreams</option>
+            <option value="none">None (Unassigned)</option>
             {workstreams.map(workstream => (
               <option key={workstream.workstream_id} value={workstream.workstream_id.toString()}>
                 {workstream.workstream_name}

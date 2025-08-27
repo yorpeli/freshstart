@@ -93,7 +93,6 @@ const MeetingsList: React.FC = () => {
         })) || [],
         // Google Calendar fields - will be added after database migration
         google_calendar_event_id: undefined,
-        google_calendar_sync_status: undefined,
         google_calendar_last_sync: undefined
       }));
       
@@ -237,7 +236,6 @@ const MeetingsList: React.FC = () => {
       {/* Filters */}
       <MeetingsFilters
         filters={filters}
-        meetingTypes={meetingTypes}
         phases={phases}
         workstreams={workstreams}
         onFiltersChange={updateFilters}
@@ -303,8 +301,7 @@ const MeetingsList: React.FC = () => {
                 if (meeting.meeting_id === filteredMeetings[0]?.meeting_id) {
                   console.log('First meeting data:', meeting);
                   console.log('Google Calendar fields:', {
-                    google_calendar_event_id: meeting.google_calendar_event_id,
-                    google_calendar_sync_status: meeting.google_calendar_sync_status
+                    google_calendar_event_id: meeting.google_calendar_event_id
                   });
                 }
                 

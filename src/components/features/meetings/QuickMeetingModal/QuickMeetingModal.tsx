@@ -1,5 +1,6 @@
-import React from 'react';
-import type { QuickMeetingModalProps } from './index';
+import React, { useState, useEffect } from 'react';
+import { Edit, Save, XCircle, X } from 'lucide-react';
+import type { QuickMeetingModalProps, MeetingEditForm } from './types';
 import QuickMeetingHeader from './components/QuickMeetingHeader';
 import QuickMeetingAttendees from './components/QuickMeetingAttendees';
 import QuickMeetingContext from './components/QuickMeetingContext';
@@ -9,13 +10,67 @@ const QuickMeetingModal: React.FC<QuickMeetingModalProps> = ({
   isOpen,
   onClose,
   meeting,
-  onEditTime,
-  onChangeStatus,
+  onSave,
   onViewFullDetails,
   onDownloadICS,
   className = ''
 }) => {
-  if (!isOpen || !meeting) return null;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<MeetingEditForm>(() => ({
+    meeting_name: meeting?.meeting_name || '',
+    scheduled_date: meeting?.scheduled_date || '',
+    duration_minutes: meeting?.duration_minutes || 30,
+    status: meeting?.status || 'not_scheduled',
+    location_platform: meeting?.location_platform || '',
+    phase_name: meeting?.phase_name || '',
+    initiative_name: meeting?.initiative_name || null,
+    workstream_ids: meeting?.workstreams?.map((w: { workstream_id: number }) => w.workstream_id) || []
+  }));
+
+  // Reset form when meeting changes
+  useEffect(() => {
+    if (meeting) {
+      setEditForm({
+        meeting_name: meeting.meeting_name,
+        scheduled_date: meeting.scheduled_date,
+        duration_minutes: meeting.duration_minutes,
+        status: meeting.status,
+        location_platform: meeting.location_platform,
+        phase_name: meeting.phase_name,
+        initiative_name: meeting.initiative_name,
+        workstream_ids: meeting.workstreams?.map((w: { workstream_id: number }) => w.workstream_id) || []
+      });
+      setIsEditing(false);
+    }
+  }, [meeting]);
+
+  const handleEditFormChange = (field: keyof MeetingEditForm, value: any) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    if (onSave && meeting) {
+      onSave(meeting.meeting_id, editForm);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    // Reset form to original values
+    if (meeting) {
+      setEditForm({
+        meeting_name: meeting.meeting_name,
+        scheduled_date: meeting.scheduled_date,
+        duration_minutes: meeting.duration_minutes,
+        status: meeting.status,
+        location_platform: meeting.location_platform,
+        phase_name: meeting.phase_name,
+        initiative_name: meeting.initiative_name,
+        workstream_ids: meeting.workstreams?.map((w: { workstream_id: number }) => w.workstream_id) || []
+      });
+    }
+    setIsEditing(false);
+  };
 
   const handleDownloadICS = async (meetingId: number) => {
     try {
@@ -80,24 +135,82 @@ const QuickMeetingModal: React.FC<QuickMeetingModalProps> = ({
     }
   };
 
+  if (!isOpen || !meeting) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className={`bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto ${className}`}>
         <div className="p-4 sm:p-6">
-          {/* Header with meeting name, time, duration, and close button */}
-          <QuickMeetingHeader meeting={meeting} onClose={onClose} />
+          {/* Header with edit/save/cancel buttons */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {isEditing ? 'Edit Meeting' : 'Meeting Details'}
+              </h3>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={handleSave}
+                    className="p-2 hover:bg-green-100 rounded-full transition-colors text-green-600"
+                    title="Save changes"
+                  >
+                    <Save size={20} />
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="p-2 hover:bg-red-100 rounded-full transition-colors text-red-600"
+                    title="Cancel editing"
+                  >
+                    <XCircle size={20} />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 hover:bg-blue-100 rounded-full transition-colors text-blue-600"
+                  title="Edit meeting"
+                >
+                  <Edit size={20} />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          {/* Header with meeting name, time, duration */}
+          <QuickMeetingHeader 
+            meeting={meeting} 
+            onClose={onClose}
+            isEditing={isEditing}
+            editForm={editForm}
+            onEditFormChange={handleEditFormChange}
+          />
           
-          {/* Meeting context: status, location, phase, initiative */}
-          <QuickMeetingContext meeting={meeting} className="mb-6" />
+          {/* Meeting context: status, location, phase, initiative, workstreams */}
+          <QuickMeetingContext 
+            meeting={meeting} 
+            className="mb-6"
+            isEditing={isEditing}
+            editForm={editForm}
+            onEditFormChange={handleEditFormChange}
+          />
           
           {/* Attendees list */}
           <QuickMeetingAttendees attendees={meeting.attendees} className="mb-6" />
           
-          {/* Quick actions: edit time, change status, download ICS, view full details */}
+          {/* Quick actions: save/cancel when editing, or view details/download ICS when viewing */}
           <QuickMeetingActions
             meeting={meeting}
-            onEditTime={onEditTime}
-            onChangeStatus={onChangeStatus}
+            isEditing={isEditing}
+            onSave={handleSave}
+            onCancel={handleCancel}
             onViewFullDetails={onViewFullDetails}
             onDownloadICS={handleDownloadICS}
           />

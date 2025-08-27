@@ -7,4 +7,4 @@ export { default as MeetingTypeSelector } from './CreateMeetingModal/MeetingType
 export { default as AttendeeSelector } from './CreateMeetingModal/AttendeeSelector';
 export { default as MeetingDetailModal } from './MeetingDetailModal/MeetingDetailModal';
 export { default as MeetingConductor } from './MeetingDetailModal/MeetingConductor';
-export { default as QuickMeetingModal } from './QuickMeetingModal/QuickMeetingModal';
+export { default as QuickMeetingModal } from './QuickMeetingModal';

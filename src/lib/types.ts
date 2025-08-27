@@ -69,6 +69,21 @@ export interface MeetingType {
   updated_at: string;
 }
 
+export interface Initiative {
+  initiative_id: number;
+  phase_id: number;
+  initiative_name: string;
+  description: string | null;
+  start_date: string;
+  end_date: string | null;
+  priority: number | null;
+  status: string;
+  success_metrics: string | null;
+  key_focus: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TaskType {
   task_type_id: number;
   type_name: string;

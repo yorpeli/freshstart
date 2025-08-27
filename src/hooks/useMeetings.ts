@@ -12,10 +12,14 @@ export interface Meeting {
   meeting_type: string;
   phase_name: string;
   initiative_name: string;
+  workstreams: Array<{
+    workstream_id: number;
+    workstream_name: string;
+    color_code: string;
+  }>;
   attendees: string[];
   // Google Calendar sync fields
   google_calendar_event_id?: string;
-  google_calendar_sync_status?: 'synced' | 'pending' | 'error';
   google_calendar_last_sync?: string;
 }
 
@@ -38,6 +42,13 @@ export const useMeetings = (startDate: Date, endDate: Date) => {
           meeting_types!inner(type_name),
           phases!inner(phase_name),
           initiatives!inner(initiative_name),
+          meeting_workstreams(
+            workstreams(
+              workstream_id,
+              workstream_name,
+              color_code
+            )
+          ),
           meeting_attendees(
             people!inner(first_name, last_name)
           )
@@ -61,12 +72,12 @@ export const useMeetings = (startDate: Date, endDate: Date) => {
         meeting_type: meeting.meeting_types?.type_name || '',
         phase_name: meeting.phases?.phase_name || '',
         initiative_name: meeting.initiatives?.initiative_name || '',
+        workstreams: meeting.meeting_workstreams?.map((mw: any) => mw.workstreams).filter(Boolean) || [],
         attendees: meeting.meeting_attendees?.map((attendee: any) => 
           `${attendee.people?.first_name || ''} ${attendee.people?.last_name || ''}`.trim()
         ).filter(Boolean) || [],
         // Google Calendar fields - will be added after database migration
         google_calendar_event_id: undefined,
-        google_calendar_sync_status: undefined,
         google_calendar_last_sync: undefined,
       }));
     },

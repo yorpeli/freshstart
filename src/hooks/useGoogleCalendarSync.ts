@@ -18,7 +18,7 @@ export const useGoogleCalendarSync = () => {
     try {
       const { data: meeting, error } = await supabase
         .from('meetings')
-        .select('google_calendar_event_id, google_calendar_sync_status')
+        .select('google_calendar_event_id')
         .eq('meeting_id', meetingId)
         .single();
 
@@ -122,8 +122,6 @@ export const useGoogleCalendarSync = () => {
           .from('meetings')
           .update({ 
             google_calendar_event_id: result.google_event_id,
-            google_calendar_sync_status: 'synced',
-            google_calendar_last_sync: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
           .eq('meeting_id', meetingId);

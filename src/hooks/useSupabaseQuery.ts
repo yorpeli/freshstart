@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase, TABLES, handleSupabaseError } from '../lib/supabase';
-import type { Phase, Workstream, Person, Department, MeetingType } from '../lib/types';
+import type { Phase, Workstream, Person, Department, MeetingType, Initiative } from '../lib/types';
 
 // Generic hook for fetching data from Supabase
 export const useSupabaseQuery = <T>(
@@ -109,6 +109,14 @@ export const useSinglePhase = (phaseId: string | undefined) => {
 
 export const useWorkstreams = () => {
   return useSupabaseQuery<Workstream>(TABLES.WORKSTREAMS, undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    retryDelay: 1000,
+  });
+};
+
+export const useInitiatives = () => {
+  return useSupabaseQuery<Initiative>(TABLES.INITIATIVES, undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
     retryDelay: 1000,

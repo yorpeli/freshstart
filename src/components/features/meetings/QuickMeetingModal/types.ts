@@ -4,16 +4,29 @@ export interface QuickMeetingModalProps {
   isOpen: boolean;
   onClose: () => void;
   meeting: Meeting | null;
-  onEditTime?: (meetingId: number, newDate: Date, newDuration: number) => void;
-  onChangeStatus?: (meetingId: number, newStatus: string) => void;
+  onSave?: (meetingId: number, updatedData: Partial<MeetingEditForm>) => void;
   onViewFullDetails?: (meetingId: number) => void;
   onDownloadICS?: (meetingId: number) => void;
   className?: string;
 }
 
+export interface MeetingEditForm {
+  meeting_name: string;
+  scheduled_date: string;
+  duration_minutes: number;
+  status: string;
+  location_platform: string;
+  phase_name: string;
+  initiative_name: string | null;
+  workstream_ids: number[];
+}
+
 export interface QuickMeetingHeaderProps {
   meeting: Meeting;
   onClose: () => void;
+  isEditing: boolean;
+  editForm: MeetingEditForm;
+  onEditFormChange: (field: keyof MeetingEditForm, value: any) => void;
 }
 
 export interface QuickMeetingAttendeesProps {
@@ -24,27 +37,17 @@ export interface QuickMeetingAttendeesProps {
 export interface QuickMeetingContextProps {
   meeting: Meeting;
   className?: string;
+  isEditing: boolean;
+  editForm: MeetingEditForm;
+  onEditFormChange: (field: keyof MeetingEditForm, value: any) => void;
 }
 
 export interface QuickMeetingActionsProps {
   meeting: Meeting;
-  onEditTime?: (meetingId: number, newDate: Date, newDuration: number) => void;
-  onChangeStatus?: (meetingId: number, newStatus: string) => void;
+  isEditing: boolean;
+  onSave: () => void;
+  onCancel: () => void;
   onViewFullDetails?: (meetingId: number) => void;
   onDownloadICS?: (meetingId: number) => void;
   className?: string;
-}
-
-export interface TimeEditModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  meeting: Meeting;
-  onSave: (newDate: Date, newDuration: number) => void;
-}
-
-export interface StatusChangeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  meeting: Meeting;
-  onSave: (newStatus: string) => void;
 }
