@@ -7,6 +7,8 @@ import { useMeetingPermissions } from './useMeetingPermissions';
 import { TemplateEditorWithPreview } from '../TemplateEditor';
 import NotesManager from './NotesManager';
 import AttendeeManager from './AttendeeManager';
+import MeetingContent from './MeetingContent';
+import { MEETING_FIELDS_CONFIG } from './meetingFieldsConfig';
 
 interface DetailedMeeting {
   meeting_id: number;
@@ -155,6 +157,9 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Local state for all meeting fields
+  const [localFieldValues, setLocalFieldValues] = useState<Record<string, string>>({});
+
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, isLoading, error } = useMeetingDetail(meetingId);
@@ -207,6 +212,54 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
     });
   }, [meetingId, queryClient]);
 
+  // Initialize local state when meeting data loads
+  useEffect(() => {
+    if (data?.meeting) {
+      const initialValues: Record<string, string> = {};
+      MEETING_FIELDS_CONFIG.forEach(field => {
+        const value = data.meeting[field.databaseField];
+        initialValues[field.key] = value || '';
+      });
+      setLocalFieldValues(initialValues);
+    }
+  }, [data?.meeting]);
+
+  // Handler for saving field values
+  const handleFieldSave = async (field: string, value: string) => {
+    try {
+      const fieldConfig = MEETING_FIELDS_CONFIG.find(f => f.key === field);
+      if (!fieldConfig) return;
+
+      const updateData: Partial<DetailedMeeting> = {};
+      updateData[fieldConfig.databaseField] = value;
+      
+      await handleMeetingUpdate(updateData);
+      
+      // Update local state
+      setLocalFieldValues(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    } catch (error) {
+      console.error(`Failed to save ${field}:`, error);
+      throw error;
+    }
+  };
+
+  // Handler for canceling field edits
+  const handleFieldCancel = (field: string) => {
+    if (data?.meeting) {
+      const fieldConfig = MEETING_FIELDS_CONFIG.find(f => f.key === field);
+      if (!fieldConfig) return;
+
+      const originalValue = data.meeting[fieldConfig.databaseField] || '';
+      setLocalFieldValues(prev => ({
+        ...prev,
+        [field]: originalValue
+      }));
+    }
+  };
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -258,59 +311,30 @@ const MeetingPageContainer: React.FC<MeetingPageContainerProps> = ({ meetingId }
         hasUnsavedChanges={hasUnsavedChanges}
       />
 
-      {/* Status Card and Objectives & Messages Section - Always Visible */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
-        {/* Objectives & Messages - Left side, 50% width */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">🎯</span>
-            <h3 className="text-lg font-medium text-gray-900">Objectives & Messages</h3>
-          </div>
-          <div className="space-y-3 flex-1 min-h-0">
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-2.5 hover:bg-blue-100 transition-colors duration-200">
-              <h4 className="text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
-                <span className="text-blue-600">📋</span>
-                Meeting Objectives
-              </h4>
-              <div className="flex items-start justify-between">
-                <p className="text-sm text-gray-900 flex-1 leading-tight">
-                  {meeting.meeting_objectives || 'None specified'}
-                </p>
-                {permissions.canEditMeetingDetails && (
-                  <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline ml-2 flex-shrink-0 transition-all duration-200 hover:bg-blue-100 hover:scale-105 px-2 py-1 rounded font-medium">
-                    Edit
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="bg-green-50 border border-green-100 rounded-lg p-2.5 hover:bg-green-100 transition-colors duration-200">
-              <h4 className="text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
-                <span className="text-green-600">💬</span>
-                Key Messages
-              </h4>
-              <div className="flex items-start justify-between">
-                <p className="text-sm text-gray-900 flex-1 leading-relaxed">
-                  {meeting.key_messages || 'None specified'}
-                </p>
-                {permissions.canEditMeetingDetails && (
-                  <button className="text-xs text-green-600 hover:text-green-800 hover:underline ml-2 flex-shrink-0 transition-colors duration-200 hover:bg-green-100 px-2 py-1 rounded">
-                    Edit
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Card - Right side, 50% width */}
-        <div className="shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
+      {/* Status Card Section */}
+      <div className="flex justify-end">
+        <div className="w-full max-w-md">
           <MeetingStatusCard
             meeting={meeting}
             attendees={attendees}
-            className="flex-1"
+            className="w-full"
           />
         </div>
       </div>
+
+      {/* Meeting Content Section - Always Visible */}
+      <MeetingContent
+        meetingData={{
+          meeting_objectives: localFieldValues.objectives || '',
+          key_messages: localFieldValues.keyMessages || '',
+          unstructured_notes: localFieldValues.notes || '',
+          meeting_summary: localFieldValues.summary || '',
+          overall_assessment: localFieldValues.assessment || ''
+        }}
+        canEdit={permissions.canEditMeetingDetails}
+        onSave={handleFieldSave}
+        onCancel={handleFieldCancel}
+      />
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">

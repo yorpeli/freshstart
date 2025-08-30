@@ -97,7 +97,7 @@ const PhaseMetadata: React.FC<PhaseMetadataProps> = ({ phase, className = '' }) 
           {/* Date Range */}
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">Date Range</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <div className="text-lg font-semibold text-gray-900">
               <EditableDate
                 value={phase.start_date}
                 onSave={(value) => handleSave('start_date', value)}
@@ -109,7 +109,7 @@ const PhaseMetadata: React.FC<PhaseMetadataProps> = ({ phase, className = '' }) 
                 onSave={(value) => handleSave('end_date', value)}
                 className="inline-block"
               />
-            </p>
+            </div>
           </div>
 
           {/* Working Days */}
