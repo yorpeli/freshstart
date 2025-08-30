@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Bold, Italic, List, Link, AtSign, Hash, Calendar, Eye, EyeOff, Save } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Bold, Italic, List, Link, AtSign, Hash, Calendar, Eye, EyeOff, Save, Quote, Code, Table as TableIcon } from 'lucide-react';
 
 export interface RichTextEditorProps {
   value: string;
@@ -14,7 +21,7 @@ export interface RichTextEditorProps {
   showToolbar?: boolean;
   showMentions?: boolean;
   showCharacterCount?: boolean;
-  showMarkdownInfo?: boolean;
+  showHtmlInfo?: boolean;
   focusMode?: boolean;
   onFocusModeToggle?: (enabled: boolean) => void;
   minHeight?: string;
@@ -51,96 +58,82 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
   showToolbar = true,
   showMentions = true,
   showCharacterCount = true,
-  showMarkdownInfo = true,
+  showHtmlInfo = true,
   focusMode = false,
   onFocusModeToggle,
   minHeight = '8rem',
   maxHeight = '20rem'
 }, ref) => {
-  const [internalValue, setInternalValue] = useState(value);
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [isFocused, setIsFocused] = useState(false);
-  const [showMentionsPanel, setShowMentionsPanel] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Expose methods via ref
-  React.useImperativeHandle(ref, () => ({
-    focus: () => textareaRef.current?.focus(),
-    blur: () => textareaRef.current?.blur(),
-    getValue: () => internalValue,
-    setValue: (value: string) => {
-      setInternalValue(value);
-      onChange(value);
-    },
-    insertText: (text: string, atCursor = true) => {
-      if (atCursor && textareaRef.current) {
-        const { start, end } = getSelection();
-        const newText = internalValue.substring(0, start) + text + internalValue.substring(end);
-        setInternalValue(newText);
-        onChange(newText);
-        
-        // Set cursor position after inserted text
-        setTimeout(() => {
-          if (textareaRef.current) {
-            textareaRef.current.focus();
-            textareaRef.current.setSelectionRange(start + text.length, start + text.length);
-          }
-        }, 0);
-      } else {
-        setInternalValue(text);
-        onChange(text);
-      }
-    },
-    insertMention: (type: 'people' | 'tasks' | 'meetings', text = '') => {
-      insertMentionAtCursor(type, text);
-    }
-  }));
-
-  // Sync internal value with external value
-  useEffect(() => {
-    setInternalValue(value);
-  }, [value]);
-
-  // Parse mentions from text with enhanced regex
-  const parseMentions = useCallback((text: string): Mention[] => {
-    const mentionRegex = /(@[\w\s]+)|(#[\w\s]+)|(![\w\s]+)/g;
-    const mentions: Mention[] = [];
-    let match;
-
-    while ((match = mentionRegex.exec(text)) !== null) {
-      const type = match[0].startsWith('@') ? 'people' : 
-                   match[0].startsWith('#') ? 'tasks' : 'meetings';
+  // TipTap editor instance
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder,
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+    ],
+    content: value,
+    editable: !disabled,
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      onChange(html);
       
-      mentions.push({
-        type,
-        text: match[0],
-        start: match.index,
-        end: match.index + match[0].length,
-        id: `${type}_${match.index}_${Date.now()}`
-      });
-    }
+      // Parse mentions from HTML content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const textContent = tempDiv.textContent || '';
+      
+      const mentionRegex = /(@[\w\s]+)|(#[\w\s]+)|(![\w\s]+)/g;
+      const mentions: Mention[] = [];
+      let match;
 
-    return mentions;
-  }, []);
+      while ((match = mentionRegex.exec(textContent)) !== null) {
+        const type = match[0].startsWith('@') ? 'people' : 
+                     match[0].startsWith('#') ? 'tasks' : 'meetings';
+        
+        mentions.push({
+          type,
+          text: match[0],
+          start: match.index,
+          end: match.index + match[0].length,
+          id: `${type}_${match.index}_${Date.now()}`
+        });
+      }
+      
+      setMentions(mentions);
+    },
+    onFocus: () => setIsFocused(true),
+    onBlur: () => setIsFocused(false),
+  });
 
-  // Update mentions when text changes
+  // Sync external value with editor
   useEffect(() => {
-    const newMentions = parseMentions(internalValue);
-    setMentions(newMentions);
-  }, [internalValue, parseMentions]);
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value);
+    }
+  }, [editor, value]);
 
   // Auto-save functionality
   useEffect(() => {
-    if (autoSave && internalValue !== value) {
+    if (autoSave && editor && value !== editor.getHTML()) {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
 
       setAutoSaveStatus('saving');
       autoSaveTimeoutRef.current = setTimeout(() => {
-        onChange(internalValue);
+        onChange(editor.getHTML());
         setAutoSaveStatus('saved');
         
         // Reset status after 2 seconds
@@ -153,226 +146,64 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [internalValue, value, autoSave, autoSaveDelay, onChange]);
+  }, [editor, value, autoSave, autoSaveDelay, onChange]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setInternalValue(newValue);
-    
-    // Only call onChange immediately if auto-save is disabled
-    if (!autoSave) {
-      onChange(newValue);
-    }
-  };
-
-  // Get current selection
-  const getSelection = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return { start: 0, end: 0, text: '' };
-    
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value.substring(start, end);
-    
-    return { start, end, text };
-  };
-
-  // Apply formatting to selected text
-  const applyFormatting = useCallback((before: string, after: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const { start, end, text } = getSelection();
-    const newText = internalValue.substring(0, start) + before + text + after + internalValue.substring(end);
-    
-    setInternalValue(newText);
-    if (!autoSave) onChange(newText);
-    
-    // Set cursor position after formatting
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + text.length);
-    }, 0);
-  }, [internalValue, onChange, autoSave]);
-
-  // Handle keyboard shortcuts
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'b':
-          e.preventDefault();
-          applyFormatting('**', '**');
-          break;
-        case 'i':
-          e.preventDefault();
-          applyFormatting('*', '*');
-          break;
-        case 'k':
-          e.preventDefault();
-          makeLink();
-          break;
-        case 'l':
-          e.preventDefault();
-          makeList();
-          break;
-        case 's':
-          e.preventDefault();
-          if (autoSave) {
-            onChange(internalValue);
-            setAutoSaveStatus('saved');
-            setTimeout(() => setAutoSaveStatus('idle'), 2000);
-          }
-          break;
+  // Expose methods via ref
+  React.useImperativeHandle(ref, () => ({
+    focus: () => editor?.commands.focus(),
+    blur: () => editor?.commands.blur(),
+    getValue: () => editor?.getHTML() || '',
+    setValue: (value: string) => {
+      editor?.commands.setContent(value);
+      onChange(value);
+    },
+    insertText: (text: string, atCursor = true) => {
+      if (atCursor) {
+        editor?.commands.insertContent(text);
+      } else {
+        editor?.commands.setContent(text);
+        onChange(text);
       }
+    },
+    insertMention: (type: 'people' | 'tasks' | 'meetings', text = '') => {
+      const mentionText = type === 'people' ? '@' : type === 'tasks' ? '#' : '!';
+      const insertText = mentionText + text;
+      editor?.chain().focus().insertContent(insertText).run();
     }
-  }, [applyFormatting, autoSave, onChange, internalValue]);
+  }));
 
   // Formatting functions
-  const makeBold = () => applyFormatting('**', '**');
-  const makeItalic = () => applyFormatting('*', '*');
+  const makeBold = () => editor?.chain().focus().toggleBold().run();
+  const makeItalic = () => editor?.chain().focus().toggleItalic().run();
+  const makeQuote = () => editor?.chain().focus().toggleBlockquote().run();
+  const makeCode = () => editor?.chain().focus().toggleCodeBlock().run();
   
   const makeLink = useCallback(() => {
-    const { start, end, text } = getSelection();
-    if (text) {
-      // If text is selected, wrap it in a link
-      const linkText = prompt('Enter link text (or press Enter to use selected text):', text);
-      if (linkText === null) return; // User cancelled
-      
-      const url = prompt('Enter URL:');
-      if (url === null) return; // User cancelled
-      
-      const linkMarkdown = `[${linkText || text}](${url})`;
-      const newText = internalValue.substring(0, start) + linkMarkdown + internalValue.substring(end);
-      
-      setInternalValue(newText);
-      if (!autoSave) onChange(newText);
-      
-      // Set cursor position after the link
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(start + linkMarkdown.length, start + linkMarkdown.length);
-        }
-      }, 0);
-    } else {
-      // If no text selected, insert a link template
-      const linkText = prompt('Enter link text:');
-      if (linkText === null) return; // User cancelled
-      
-      const url = prompt('Enter URL:');
-      if (url === null) return; // User cancelled
-      
-      const linkMarkdown = `[${linkText}](${url})`;
-      const newText = internalValue.substring(0, start) + linkMarkdown + internalValue.substring(start);
-      
-      setInternalValue(newText);
-      if (!autoSave) onChange(newText);
-      
-      // Set cursor position after the link
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(start + linkMarkdown.length, start + linkMarkdown.length);
-        }
-      }, 0);
+    const url = prompt('Enter URL:');
+    if (url && editor) {
+      editor.chain().focus().setLink({ href: url }).run();
     }
-  }, [internalValue, onChange, autoSave]);
+  }, [editor]);
 
   const makeList = useCallback(() => {
-    const { start, end, text } = getSelection();
-    if (text) {
-      // Convert selected text to list items
-      const lines = text.split('\n');
-      const listItems = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
-      const newText = internalValue.substring(0, start) + listItems + internalValue.substring(end);
-      
-      setInternalValue(newText);
-      if (!autoSave) onChange(newText);
-      
-      // Set cursor position
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(start, start + listItems.length);
-        }
-      }, 0);
-    } else {
-      // Insert list marker at cursor
-      const newText = internalValue.substring(0, start) + '- ' + internalValue.substring(start);
-      setInternalValue(newText);
-      if (!autoSave) onChange(newText);
-      
-      // Set cursor position after list marker
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(start + 2, start + 2);
-        }
-      }, 0);
+    editor?.chain().focus().toggleBulletList().run();
+  }, [editor]);
+
+  const makeTable = useCallback(() => {
+    const rows = prompt('Number of rows:', '3');
+    const cols = prompt('Number of columns:', '3');
+    
+    if (rows && cols && editor) {
+      editor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: true }).run();
     }
-  }, [internalValue, onChange, autoSave]);
+  }, [editor]);
 
   // Insert mention at cursor
   const insertMentionAtCursor = useCallback((type: 'people' | 'tasks' | 'meetings', text = '') => {
-    const { start } = getSelection();
     const mentionText = type === 'people' ? '@' : type === 'tasks' ? '#' : '!';
     const insertText = mentionText + text;
-    const newText = internalValue.substring(0, start) + insertText + internalValue.substring(start);
-    
-    setInternalValue(newText);
-    if (!autoSave) onChange(newText);
-    
-    // Set cursor position after mention
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(start + insertText.length, start + insertText.length);
-      }
-    }, 0);
-  }, [internalValue, onChange, autoSave]);
-
-  // Auto-convert URLs to markdown links
-  const convertUrlsToLinks = useCallback(() => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    let newText = internalValue;
-    let match;
-    let offset = 0;
-    
-    while ((match = urlRegex.exec(internalValue)) !== null) {
-      const url = match[1];
-      const start = match.index + offset;
-      const end = start + url.length;
-      
-      // Check if this URL is already in a markdown link
-      const beforeText = newText.substring(0, start);
-      const afterText = newText.substring(end);
-      
-      // If it's not already a markdown link, convert it
-      if (!beforeText.match(/\[[^\]]*\]\([^)]*$/)) {
-        const linkMarkdown = `[${url}](${url})`;
-        newText = beforeText + linkMarkdown + afterText;
-        offset += linkMarkdown.length - url.length;
-      }
-    }
-    
-    if (newText !== internalValue) {
-      setInternalValue(newText);
-      if (!autoSave) onChange(newText);
-    }
-  }, [internalValue, onChange, autoSave]);
-
-  // Handle paste events to auto-convert URLs
-  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const pastedText = e.clipboardData.getData('text');
-    
-    // Check if pasted text contains URLs
-    if (pastedText.match(/https?:\/\/[^\s]+/)) {
-      // Let the paste happen, then convert URLs
-      setTimeout(() => {
-        convertUrlsToLinks();
-      }, 0);
-    }
-  }, [convertUrlsToLinks]);
+    editor?.chain().focus().insertContent(insertText).run();
+  }, [editor]);
 
   // Focus mode toggle
   const toggleFocusMode = useCallback(() => {
@@ -419,7 +250,7 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
         <button
           type="button"
           onClick={makeBold}
-          disabled={disabled}
+          disabled={disabled || !editor}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Bold (Ctrl+B)"
         >
@@ -428,16 +259,19 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
         <button
           type="button"
           onClick={makeItalic}
-          disabled={disabled}
+          disabled={disabled || !editor}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Italic (Ctrl+I)"
         >
           <Italic className="w-4 h-4" />
         </button>
+        
+        <div className="h-4 w-px bg-gray-300 mx-1"></div>
+        
         <button
           type="button"
           onClick={makeList}
-          disabled={disabled}
+          disabled={disabled || !editor}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="List (Ctrl+L)"
         >
@@ -446,11 +280,38 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
         <button
           type="button"
           onClick={makeLink}
-          disabled={disabled}
+          disabled={disabled || !editor}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Link (Ctrl+K)"
         >
           <Link className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={makeTable}
+          disabled={disabled || !editor}
+          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Insert Table"
+        >
+          <TableIcon className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={makeQuote}
+          disabled={disabled || !editor}
+          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Quote"
+        >
+          <Quote className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={makeCode}
+          disabled={disabled || !editor}
+          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Code Block"
+        >
+          <Code className="w-4 h-4" />
         </button>
         
         {showMentions && (
@@ -459,7 +320,7 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
             <button
               type="button"
               onClick={() => insertMentionAtCursor('people')}
-              disabled={disabled}
+              disabled={disabled || !editor}
               className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Mention people (@)"
             >
@@ -468,7 +329,7 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
             <button
               type="button"
               onClick={() => insertMentionAtCursor('tasks')}
-              disabled={disabled}
+              disabled={disabled || !editor}
               className="p-2 text-gray-600 hover:text-blue-800 hover:bg-blue-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Mention tasks (#)"
             >
@@ -477,7 +338,7 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
             <button
               type="button"
               onClick={() => insertMentionAtCursor('meetings')}
-              disabled={disabled}
+              disabled={disabled || !editor}
               className="p-2 text-gray-600 hover:text-purple-800 hover:bg-purple-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Mention meetings (!)"
             >
@@ -515,8 +376,8 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
     );
   }, [
     showToolbar, showMentions, focusMode, autoSave, autoSaveStatus,
-    makeBold, makeItalic, makeList, makeLink, insertMentionAtCursor,
-    toggleFocusMode, renderAutoSaveStatus, disabled, onFocusModeToggle
+    makeBold, makeItalic, makeList, makeLink, makeTable, makeQuote, makeCode, insertMentionAtCursor,
+    toggleFocusMode, renderAutoSaveStatus, disabled, editor, onFocusModeToggle
   ]);
 
   // Memoized mentions display
@@ -549,23 +410,20 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
     return (
       <div className="text-xs text-gray-500 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          {showCharacterCount && <span>{internalValue.length} characters</span>}
-          {showMarkdownInfo && <span className="text-gray-400">Markdown supported</span>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={convertUrlsToLinks}
-            disabled={disabled}
-            className="text-blue-600 hover:text-blue-800 text-xs underline disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Convert URLs to clickable links"
-          >
-            Convert URLs
-          </button>
+          {showCharacterCount && (
+            <span>
+              {editor?.getHTML()?.length || 0} characters
+            </span>
+          )}
+          {showHtmlInfo && <span className="text-gray-400">Rich text editor</span>}
         </div>
       </div>
     );
-  }, [showCharacterCount, showMarkdownInfo, internalValue.length, convertUrlsToLinks, disabled]);
+  }, [showCharacterCount, showHtmlInfo, editor]);
+
+  if (!editor) {
+    return <div>Loading editor...</div>;
+  }
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -578,27 +436,21 @@ const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
       
       {toolbar}
       
-      <textarea
-        ref={textareaRef}
-        value={internalValue}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        className={`w-full p-3 border border-gray-300 rounded-b-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm transition-all duration-200 ${
+      <div
+        className={`w-full border border-gray-300 rounded-b-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 resize-none text-sm transition-all duration-200 ${
           showToolbar ? '' : 'rounded-t-md'
-        } ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'} ${
-          isFocused ? 'border-blue-500' : ''
-        }`}
+        } ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
         style={{
           minHeight,
-          maxHeight: focusMode ? 'none' : maxHeight
+          maxHeight: focusMode ? 'none' : maxHeight,
+          overflowY: focusMode ? 'visible' : 'auto'
         }}
-      />
+      >
+        <EditorContent 
+          editor={editor} 
+          className="p-3 prose prose-sm max-w-none"
+        />
+      </div>
       
       {mentionsDisplay}
       {footer}

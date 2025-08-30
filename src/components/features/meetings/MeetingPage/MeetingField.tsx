@@ -101,7 +101,10 @@ const MeetingField: React.FC<MeetingFieldProps> = ({
               className={`${backgroundColor} border ${borderColor} rounded-lg p-4`}
               style={{ minHeight }}
             >
-              <div className="text-sm text-gray-900 whitespace-pre-wrap">{localValue}</div>
+              <div 
+                className="text-sm text-gray-900"
+                dangerouslySetInnerHTML={{ __html: localValue }}
+              />
             </div>
           ) : (
             <div className="text-gray-500 italic text-sm" style={{ minHeight }}>
@@ -119,6 +122,7 @@ const MeetingField: React.FC<MeetingFieldProps> = ({
           autoSave={false}
           showMentions={true}
           showCharacterCount={true}
+          showHtmlInfo={true}
           minHeight={minHeight}
           maxHeight="none"
           disabled={false}

@@ -39,32 +39,15 @@ This is a React 18 + TypeScript SaaS application for VP Product onboarding manag
 - **Routing**: React Router v6
 - **Database**: Supabase (PostgreSQL)
 - **Icons**: Lucide React
-- **Additional**: Drag & drop (@dnd-kit), date handling (date-fns), markdown rendering (react-markdown)
 
 ### Core Architecture Patterns
 
-**Data Layer**: Uses TanStack Query with custom hooks in `src/hooks/useSupabaseQuery.ts` for all server state management. Key hooks include:
-- `useSupabaseQuery.ts` - Generic Supabase data fetching
-- `useMeetings.ts` - Meeting management
-- `usePhaseEditing.ts` - Phase editing capabilities
-- `useGlobalSearch.ts` - Global search functionality
-- `useDailyOverview.ts` - Daily overview data
-- `useGoogleCalendarSync.ts` - Google Calendar integration
+**Data Layer**: Uses TanStack Query with custom hooks in `src/hooks/useSupabaseQuery.ts` for all server state management. The application follows a read-only pattern with no CRUD operations implemented.
 
 **Component Organization**:
 - `src/components/layout/` - Layout components (Sidebar, Header, Layout)
 - `src/components/ui/` - Reusable UI components (Badge, Card, Table, Modal, ErrorBoundary)
 - `src/components/views/` - Page-specific view components for each route
-- `src/components/features/` - Feature-specific components organized by domain:
-  - `phases/` - Phase management components
-  - `meetings/` - Meeting-related components
-  - `people/` - People management components
-  - `workstreams/` - Workstream components
-  - `tasks/` - Task management components
-  - `notes/` - Notes functionality
-  - `dailyPlanner/` - Daily planning features
-  - `dashboard/` - Dashboard components
-- `src/components/shared/` - Shared components (EmptyState, ErrorState, LoadingState, ViewHeader)
 
 **Type System**: Comprehensive TypeScript definitions in `src/lib/types.ts` with database entity types matching Supabase schema.
 
@@ -85,12 +68,6 @@ This is a React 18 + TypeScript SaaS application for VP Product onboarding manag
 
 **Error Handling**: Centralized error handling with ErrorBoundary components and consistent error state management through TanStack Query.
 
-**Feature Architecture**: Features are organized by domain with their own components, hooks, and types. Each feature directory typically contains:
-- Main component files
-- Sub-components in dedicated folders
-- Feature-specific hooks
-- Index files for clean imports
-
 ## Environment Setup
 
 Requires `.env.local` file with:
@@ -101,14 +78,4 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ## Testing and Quality
 
-The project uses:
-- **ESLint**: TypeScript ESLint configurations with React hooks and refresh plugins
-- **TypeScript**: Strict type checking with `tsc -b` included in build process
-- **Build verification**: Type checking runs before building via the build command
-
-Run lint checking with:
-```bash
-npm run lint
-```
-
-Type checking is automatically included in the build process.
+The project uses ESLint with TypeScript ESLint configurations. Run type checking with the build command which includes `tsc -b` before building.
